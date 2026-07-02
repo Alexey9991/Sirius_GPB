@@ -1,3 +1,4 @@
+from sqlalchemy import orm
 import sqlalchemy
 import datetime
 
@@ -9,7 +10,9 @@ class News(SqlAlchemyBase, JsonSerializableMixin):
     __tablename__ = "news"
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    project_id = sqlalchemy.Column(sqlalchemy.String, nullable=False, index=True)
+    project_id = sqlalchemy.Column(
+        sqlalchemy.String, sqlalchemy.ForeignKey("projects.project_id", ondelete="CASCADE"),
+        nullable=False, index=True)
     project_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     developer = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     title = sqlalchemy.Column(sqlalchemy.String, nullable=False)
@@ -18,8 +21,6 @@ class News(SqlAlchemyBase, JsonSerializableMixin):
     source = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     category = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     sentiment = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    created_at = sqlalchemy.Column(
-        sqlalchemy.DateTime,
-        default=datetime.datetime.now,
-        nullable=False
-    )
+    created_at = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
+
+    project = orm.relationship("Project", back_populates="news")
