@@ -1,6 +1,7 @@
 from sqlalchemy import orm
 import sqlalchemy
 import datetime
+import uuid
 
 from .db_session import SqlAlchemyBase
 from .json_mixin import JsonSerializableMixin
@@ -9,12 +10,12 @@ from .json_mixin import JsonSerializableMixin
 class Project(SqlAlchemyBase, JsonSerializableMixin):
     __tablename__ = "projects"
 
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     selection = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     risk = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     region = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    project_id = sqlalchemy.Column(sqlalchemy.String, unique=True, index=True, nullable=False)
-    project_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+    id = sqlalchemy.Column(
+        sqlalchemy.String, primary_key=True, unique=True, nullable=False, default=lambda: uuid.uuid4().hex)
+    name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     city = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     district = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     area = sqlalchemy.Column(sqlalchemy.String, nullable=True)

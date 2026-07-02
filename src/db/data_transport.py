@@ -32,8 +32,8 @@ def import_projects(data: list, db_sess: Session):
         project.selection = row["selection"]
         project.risk = row["risk"]
         project.region = row["region"]
-        project.project_id = row["project_id"]
-        project.project_name = row["project_name"]
+        project.id = row["id"]
+        project.name = row["name"]
         project.city = row["city"]
         project.district = row.get("district")
         project.area = row.get("area")

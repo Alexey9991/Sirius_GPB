@@ -1,4 +1,4 @@
-﻿selection,risk,region,project_id,project_name,city,district,area,class_type,developer,builder,planned_rve_date,implementation_stage,construction_stage,schedule_status
+﻿selection,risk,region,id,name,city,district,area,class_type,developer,builder,planned_rve_date,implementation_stage,construction_stage,schedule_status
 проблемный,высокий (заморожен),Щёлково,2ca4d5c5067dea9fabd4bdbecc6d3cb1,Горизонт,Щёлково,,Щёлково г.о.,Комфорт,Бизнеслэнд,Бизнеслэнд,2019-04-30,Заморожен,Монтажные и отделочные работы,просрочка (не в графике)
 проблемный,средний (снят с продажи),Москва,c6bcf2246d22d85f1e0b6c7a965b58df,Турист,Москва,СВАО,Ростокино,Эконом,Алтай,Февраль,2022-01-31,Удален,Реконструкция,просрочка (не в графике)
 проблемный,средний (снят с продажи),Сочи,54c8c3337371a5fff89d2d8d558ed4a4,Volna Resort Line One,Сочи,Сочи г.о.,Адлерский р-н,Элитный,AR Group,Nedvex,2023-09-30,Удален,Монтажные и отделочные работы,просрочка (не в графике)

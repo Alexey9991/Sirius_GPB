@@ -1,6 +1,7 @@
 from sqlalchemy import orm
 import sqlalchemy
 import datetime
+import uuid
 
 from .db_session import SqlAlchemyBase
 from .json_mixin import JsonSerializableMixin
@@ -9,10 +10,10 @@ from .json_mixin import JsonSerializableMixin
 class News(SqlAlchemyBase, JsonSerializableMixin):
     __tablename__ = "news"
 
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    id = sqlalchemy.Column(
+        sqlalchemy.String, primary_key=True, unique=True, nullable=False, default=lambda: uuid.uuid4().hex)
     project_id = sqlalchemy.Column(
-        sqlalchemy.String, sqlalchemy.ForeignKey("projects.project_id", ondelete="CASCADE"),
-        nullable=False, index=True)
+        sqlalchemy.String, sqlalchemy.ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     project_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     developer = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     title = sqlalchemy.Column(sqlalchemy.String, nullable=False)
