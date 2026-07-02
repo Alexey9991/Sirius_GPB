@@ -21,3 +21,6 @@ def import_news(data: list, db_sess: Session):
         news.sentiment = news_data["sentiment"]
         db_sess.add(news)
     db_sess.flush()
+
+def export_news(db_sess: Session) -> list:
+    return [news.to_dict() for news in db_sess.query(News).all()]
