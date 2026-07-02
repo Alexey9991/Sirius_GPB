@@ -5,19 +5,11 @@ import json
 
 class JsonSerializableMixin:
     def _serialize_related(self, obj):
-        """Сериализует связанный объект"""
         if hasattr(obj, "to_dict"):
-            return obj.to_dict(
-                exclude=[rel.key for rel in class_mapper(obj.__class__).relationships]
-            )
+            return obj.to_dict(exclude=[rel.key for rel in class_mapper(obj.__class__).relationships])
         return str(obj)
 
     def to_dict(self, exclude: list = None, only: list = None):
-        """Преобразует модель в словарь.
-        Args:
-            exclude: список полей, которые нужно исключить
-            only: список полей, которые нужно включить (если указан, остальные исключаются)
-        """
         if exclude is None:
             exclude = []
         if only is None:
@@ -60,9 +52,7 @@ class JsonSerializableMixin:
         return result
 
     def to_json(self, exclude: list = None, only: list = None, **kwargs):
-        return json.dumps(
-            self.to_dict(exclude=exclude, only=only), ensure_ascii=False, **kwargs
-        )
+        return json.dumps(self.to_dict(exclude=exclude, only=only), ensure_ascii=False, **kwargs)
 
     def __str__(self):
         return self.to_json()
