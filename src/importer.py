@@ -12,7 +12,6 @@ with open(os.path.join(DB_PATH, "news.json"), "r", encoding="utf-8") as f:
     data = json.load(f)
 import_news(data, db_sess)
 
-
 with open(os.path.join(DB_PATH, "zhk_selected.csv"), "r", encoding="utf-8-sig") as f:
     data = list(csv.DictReader(f))
 import_projects(data, db_sess)
