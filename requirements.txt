@@ -1,10 +1,8 @@
 sqlalchemy
-<<<<<<< HEAD
 streamlit
 pandas
-fastapi
-uvicorn[standard]
-=======
+flask>=2.0
+flask-cors>=4.0
+pydantic>=2.0
 requests
 beautifulsoup4
->>>>>>> 67424492e1022b6af4e04afca323f1243eba533d
