@@ -1,6 +1,4 @@
 from openai import OpenAI
-import re
-from pymorphy3 import MorphAnalyzer
 
 
 class dpsk:
@@ -37,35 +35,3 @@ class dpsk:
         self.messages = [{"role": "system", "content": self.prompt}]
 
 
-morph = MorphAnalyzer()
-
-
-def preprocess(text):
-    if not isinstance(text, str):
-        return ""
-
-    # Нижний регистр
-    text = text.lower()
-
-    # Замена ё -> е
-    text = text.replace("ё", "е")
-
-    # Удаление HTML
-    text = re.sub(r"<.*?>", " ", text)
-
-    # Удаление ссылок
-    text = re.sub(r"http\S+|www\.\S+", " ", text)
-
-    # Оставляем только буквы и цифры
-    text = re.sub(r"[^а-яa-z0-9\s]", " ", text)
-
-    # Удаляем лишние пробелы
-    text = re.sub(r"\s+", " ", text).strip()
-
-    # Лемматизация
-    lemmas = [
-        morph.parse(word)[0].normal_form
-        for word in text.split()
-    ]
-
-    return " ".join(lemmas)

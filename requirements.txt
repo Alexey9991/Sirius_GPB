@@ -1,3 +1,5 @@
 sqlalchemy
 openai
 pymorphy3
+requests
+beautifulsoup4
