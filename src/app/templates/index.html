@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Risk Intelligence</title>
+  <style>/*__STYLES__*/</style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand route-link" href="#dashboard" aria-label="На главную">
+        <span class="brand-mark">G</span>
+        <span><b>Газпромбанк</b></span>
+      </a>
+
+      <label class="global-search">
+        <span>⌕</span>
+        <input id="globalSearch" type="search" placeholder="Поиск ЖК, застройщика или события" />
+      </label>
+
+      <div class="top-actions">
+        <button class="header-action notification-button" data-route="notifications" aria-label="Открыть уведомления">
+          <span class="header-action-icon" aria-hidden="true">🔔</span>
+          <span class="header-action-copy"><b>Уведомления</b><small id="notificationCount">3 новых</small></span>
+          <span class="notification-dot"></span>
+        </button>
+        <button id="profileButton" class="header-action profile-button" data-route="profile" aria-label="Открыть профиль аналитика">
+          <span id="profileAvatar" class="profile-avatar" aria-hidden="true">👤</span>
+          <span class="header-action-copy"><b id="profileName">Анна Иванова</b><small>Профиль аналитика</small></span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="nav-strip" aria-label="Основная навигация">
+      <a class="nav-card route-link" href="#dashboard" data-route="dashboard">
+        <span class="nav-icon">⌕</span><span><b>Проверить ЖК</b><small>Запуск анализа объекта</small></span>
+      </a>
+      <a class="nav-card route-link" href="#alerts" data-route="alerts">
+        <span class="nav-icon">!</span><span><b>Риски</b><small>Красные события за сутки</small></span>
+      </a>
+      <a class="nav-card route-link" href="#projects" data-route="projects">
+        <span class="nav-icon">▦</span><span><b>Проекты</b><small>Портфель объектов банка</small></span>
+      </a>
+      <a class="nav-card route-link" href="#monitoring" data-route="monitoring">
+        <span class="nav-icon">◷</span><span><b>Мониторинг</b><small>Новости и жалобы онлайн</small></span>
+      </a>
+    </nav>
+
+    <main id="app" class="page-container" aria-live="polite"></main>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script>/*__API_CONFIG__*/</script>
+  <script>/*__API_CLIENT__*/</script>
+  <script>/*__APP__*/</script>
+</body>
+</html>

@@ -1,2 +1,11 @@
 # dbtest/
 .env
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.streamlit/secrets.toml
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+Thumbs.db
