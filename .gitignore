@@ -1,2 +1,4 @@
 # dbtest/
 .env
+catboost_info/
+__pycache__/
