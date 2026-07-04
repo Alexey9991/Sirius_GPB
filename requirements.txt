@@ -1,11 +1,10 @@
-sqlalchemy>=2.0
-alembic>=1.13
-# PostgreSQL driver. Replace it if the production database uses another dialect.
-psycopg[binary]>=3.1
+sqlalchemy
+psycopg[binary]
 streamlit
 pandas
-flask>=2.0
-flask-cors>=4.0
-pydantic>=2.0
+uvicorn[standard]
+flask
+flask-cors
+pydantic
 requests
 beautifulsoup4
