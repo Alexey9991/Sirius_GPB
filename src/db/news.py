@@ -10,10 +10,10 @@ from .json_mixin import JsonSerializableMixin
 class News(SqlAlchemyBase, JsonSerializableMixin):
     __tablename__ = "news"
 
-    id = sqlalchemy.Column(
-        sqlalchemy.String, primary_key=True, unique=True, nullable=False, default=lambda: uuid.uuid4().hex)
-    project_id = sqlalchemy.Column(
-        sqlalchemy.String, sqlalchemy.ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True)
+    id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, unique=True,
+                           nullable=False, default=lambda: uuid.uuid4().hex)
+    project_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey(
+        "projects.id", ondelete="CASCADE"), nullable=True, index=True)
     project_name = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     developer = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     title = sqlalchemy.Column(sqlalchemy.String, nullable=False)
