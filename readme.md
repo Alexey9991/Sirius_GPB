@@ -18,3 +18,10 @@ streamlit run src/main.py
 ```
 
 The API listens on `http://localhost:8000` and Streamlit on `http://localhost:8501`.
+
+## Backend integration
+
+The backend uses an application factory, dependency interfaces, SQLAlchemy 2 and
+Alembic migrations. See [BACKEND_INTEGRATION.md](BACKEND_INTEGRATION.md) before
+connecting the production database, project catalog, authentication or ML/RAG
+service.

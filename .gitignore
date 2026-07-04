@@ -1,6 +1,5 @@
 # dbtest/
 .env
-<<<<<<< HEAD
 __pycache__/
 *.py[cod]
 .venv/
@@ -10,7 +9,7 @@ venv/
 .mypy_cache/
 .DS_Store
 Thumbs.db
-=======
 catboost_info/
-__pycache__/
->>>>>>> b760e547dc1774da95e28dc825626f8ae59a52dc
+data/*.sqlite3
+data/*.sqlite3-shm
+data/*.sqlite3-wal
