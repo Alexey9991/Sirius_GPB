@@ -1,11 +1,9 @@
 sqlalchemy
-psycopg[binary]
 streamlit
 pandas
 uvicorn[standard]
 flask
-flask-cors
-pydantic
+flask_cors
 requests
 beautifulsoup4
 werkzeug
