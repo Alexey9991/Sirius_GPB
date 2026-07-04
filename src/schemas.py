@@ -67,6 +67,46 @@ class AnalysisResponse(BaseModel):
     analyzed_at: datetime
 
 
+class ImpactAnalysisRequest(BaseModel):
+    event_id: str = Field(min_length=1, max_length=128)
+    question: str = Field(min_length=5, max_length=1000)
+
+
+class ImpactAnalysisResponse(BaseModel):
+    event_id: str
+    project_name: str
+    question: str
+    verdict: str
+    detailed_analysis: str
+    risk_delta: int = Field(ge=-100, le=100)
+    confidence: int = Field(ge=0, le=100)
+    factors: list[str]
+    recommendations: list[str]
+    generated_at: datetime
+
+
+class AnalysisHistoryItem(BaseModel):
+    id: str
+    project_id: str | None
+    project_name: str
+    level: RiskLevel
+    score: int = Field(ge=0, le=100)
+    summary: str
+    model_version: str
+    analyzed_at: datetime
+
+
+class RiskChange(BaseModel):
+    id: str
+    project_id: str | None
+    project_name: str
+    previous_level: RiskLevel | None
+    new_level: RiskLevel
+    previous_score: int | None = Field(default=None, ge=0, le=100)
+    new_score: int = Field(ge=0, le=100)
+    changed_at: datetime
+
+
 class OverviewStats(BaseModel):
     projects_total: int
     critical_projects: int
