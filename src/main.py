@@ -48,7 +48,11 @@ st.markdown(
 
 def frontend_signature() -> tuple[int, ...]:
     """Return asset modification times used by the development auto-reloader."""
-    return tuple(path.stat().st_mtime_ns for path in FRONTEND_FILES)
+    try:
+        return tuple(path.stat().st_mtime_ns for path in FRONTEND_FILES if path.exists())
+    except Exception as e:
+        st.warning(f"Could not read frontend files: {e}")
+        return ()
 
 
 @st.fragment(run_every=1.0)
@@ -67,10 +71,13 @@ watch_frontend_files()
 
 def load_frontend() -> str:
     """Build the iframe document while keeping frontend sources separate."""
-    template = (TEMPLATES / "index.html").read_text(encoding="utf-8")
-    styles = (STATIC / "css" / "styles.css").read_text(encoding="utf-8")
-    api_js = (STATIC / "js" / "api.js").read_text(encoding="utf-8")
-    app_js = (STATIC / "js" / "app.js").read_text(encoding="utf-8")
+    try:
+        template = (TEMPLATES / "index.html").read_text(encoding="utf-8")
+        styles = (STATIC / "css" / "styles.css").read_text(encoding="utf-8")
+        api_js = (STATIC / "js" / "api.js").read_text(encoding="utf-8")
+        app_js = (STATIC / "js" / "app.js").read_text(encoding="utf-8")
+    except FileNotFoundError as e:
+        return f"<h1>Error: Missing frontend files</h1><p>{e}</p>"
 
     config = {
         "baseUrl": os.getenv("API_BASE_URL", "http://localhost:8000/api/v1").rstrip("/"),
