@@ -1,6 +1,5 @@
 from db import db_session
 from db.__all_models import *
-from db.data_transport import import_news, import_projects
 from news_parsers import import_parsers
 from sqlalchemy.orm import Session
 import json, os, csv, tqdm, queue, threading
