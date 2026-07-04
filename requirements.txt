@@ -1,10 +1,7 @@
 sqlalchemy
-<<<<<<< HEAD
 streamlit
 pandas
 fastapi
 uvicorn[standard]
-=======
 requests
 beautifulsoup4
->>>>>>> 67424492e1022b6af4e04afca323f1243eba533d
