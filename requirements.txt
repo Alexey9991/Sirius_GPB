@@ -1,4 +1,5 @@
 sqlalchemy
+psycopg[binary]
 streamlit
 pandas
 uvicorn[standard]

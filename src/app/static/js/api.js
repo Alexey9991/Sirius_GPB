@@ -59,17 +59,128 @@
     };
   }
 
+  function impactFor(eventId, question) {
+    const event = events.find((item) => item.id === eventId) || events[0];
+    const profiles = {
+      RED: {
+        verdict: "Существенно повышает риск проекта",
+        detailed_analysis: "Новость содержит прямой негативный сигнал, который может повлиять на сроки, юридическую устойчивость и денежный поток проекта. Необходимо проверить первоисточник и сопоставить событие с графиком финансирования.",
+        risk_delta: 18,
+        confidence: 92,
+        factors: ["Высокая значимость источника", "Прямое упоминание проекта", "Негативный юридический или операционный сигнал"],
+        recommendations: ["Запросить подтверждающие документы", "Проверить график финансирования", "Назначить ответственного аналитика"],
+      },
+      YELLOW: {
+        verdict: "Умеренно повышает риск проекта",
+        detailed_analysis: "Событие формирует ранний предупреждающий сигнал, но пока не подтверждает критическое ухудшение. Итоговое влияние зависит от повторяемости публикаций и официальной реакции застройщика.",
+        risk_delta: 7,
+        confidence: 81,
+        factors: ["Косвенное влияние на сроки", "Требуется подтверждение", "Умеренный новостной фон"],
+        recommendations: ["Продолжить мониторинг", "Проверить официальные раскрытия", "Сравнить с предыдущими событиями"],
+      },
+      GREEN: {
+        verdict: "Не повышает текущий риск",
+        detailed_analysis: "Новость подтверждает нормальный ход проекта и не содержит значимых негативных сигналов. Она снижает неопределённость, но не отменяет регулярный мониторинг.",
+        risk_delta: -3,
+        confidence: 87,
+        factors: ["Положительная динамика строительства", "Нет юридических претензий", "Нейтральный или позитивный фон"],
+        recommendations: ["Сохранить плановый мониторинг", "Проверить следующий отчёт о готовности"],
+      },
+    };
+    return {
+      event_id: event.id,
+      project_name: event.project_name,
+      question,
+      ...profiles[event.level],
+      generated_at: new Date().toISOString(),
+    };
+  }
+
+  const storageKeys = {
+    favorites: "risk-intelligence:favorites",
+    analysisHistory: "risk-intelligence:analysis-history",
+    riskChanges: "risk-intelligence:risk-changes",
+  };
+
+  function readLocal(key, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return value === null ? fallback : JSON.parse(value);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeLocal(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  function mockFavoriteIds() {
+    return readLocal(storageKeys.favorites, projects.slice(0, 4).map((project) => project.id));
+  }
+
+  function recordMockAnalysis(analysis) {
+    const history = readLocal(storageKeys.analysisHistory, []);
+    const previous = history.find((item) => item.project_name === analysis.project_name);
+    const entry = {
+      id: `analysis-${Date.now()}`,
+      project_id: analysis.project_id,
+      project_name: analysis.project_name,
+      level: analysis.level,
+      score: analysis.score,
+      summary: analysis.summary,
+      model_version: analysis.model_version,
+      analyzed_at: analysis.analyzed_at,
+    };
+    writeLocal(storageKeys.analysisHistory, [entry, ...history].slice(0, 100));
+
+    if (!previous || previous.level !== analysis.level || previous.score !== analysis.score) {
+      const changes = readLocal(storageKeys.riskChanges, []);
+      changes.unshift({
+        id: `risk-${Date.now()}`,
+        project_id: analysis.project_id,
+        project_name: analysis.project_name,
+        previous_level: previous?.level || null,
+        new_level: analysis.level,
+        previous_score: previous?.score ?? null,
+        new_score: analysis.score,
+        changed_at: analysis.analyzed_at,
+      });
+      writeLocal(storageKeys.riskChanges, changes.slice(0, 100));
+    }
+  }
+
   const mocks = {
     async getOverview() {
-      return { stats: { projects_total: 42, critical_projects: 5, events_today: 1847, sources_online: 126 }, favorites: projects.slice(0, 4), recent_events: events.slice(0, 4) };
+      const favoriteIds = new Set(mockFavoriteIds());
+      return { stats: { projects_total: 42, critical_projects: 5, events_today: 1847, sources_online: 126 }, favorites: projects.filter((project) => favoriteIds.has(project.id)), recent_events: events.slice(0, 4) };
     },
-    async analyze(projectName) { await delay(280); return analysisFor(projectName); },
-    async getAlerts(level = "ALL") { return events.filter((e) => level === "ALL" || e.level === level); },
+    async analyze(projectName) {
+      await delay(280);
+      const analysis = analysisFor(projectName);
+      recordMockAnalysis(analysis);
+      return analysis;
+    },
+    async getAlerts(level = "ALL") { return events.filter((e) => e.level !== "GREEN" && (level === "ALL" || e.level === level)); },
     async getProjects(query = "", level = "ALL") {
       const q = query.toLowerCase();
       return projects.filter((p) => (!q || `${p.name} ${p.city} ${p.developer}`.toLowerCase().includes(q)) && (level === "ALL" || p.level === level));
     },
     async getEvents() { return events; },
+    async explainImpact(eventId, question) { await delay(420); return impactFor(eventId, question); },
+    async getFavorites() {
+      const favoriteIds = new Set(mockFavoriteIds());
+      return projects.filter((project) => favoriteIds.has(project.id));
+    },
+    async addFavorite(projectId) {
+      writeLocal(storageKeys.favorites, [...new Set([...mockFavoriteIds(), projectId])]);
+      return projects.find((project) => project.id === projectId);
+    },
+    async removeFavorite(projectId) {
+      writeLocal(storageKeys.favorites, mockFavoriteIds().filter((id) => id !== projectId));
+    },
+    async getAnalysisHistory() { return readLocal(storageKeys.analysisHistory, []); },
+    async getRiskChanges() { return readLocal(storageKeys.riskChanges, []); },
     async login(credentials) {
       await delay(240);
       return {
@@ -97,6 +208,7 @@
       const detail = await response.text();
       throw new Error(`API ${response.status}: ${detail || response.statusText}`);
     }
+    if (response.status === 204) return null;
     return response.json();
   }
 
@@ -110,6 +222,12 @@
     getAlerts: (level = "ALL") => request(`/alerts?level=${encodeURIComponent(level)}&limit=100`),
     getProjects: (query = "", level = "ALL") => request(`/projects?query=${encodeURIComponent(query)}&level=${encodeURIComponent(level)}`),
     getEvents: () => request("/events?limit=100"),
+    explainImpact: (eventId, question) => request("/ai/impact", { method: "POST", body: JSON.stringify({ event_id: eventId, question }) }),
+    getFavorites: () => request("/favorites"),
+    addFavorite: (projectId) => request(`/favorites/${encodeURIComponent(projectId)}`, { method: "POST" }),
+    removeFavorite: (projectId) => request(`/favorites/${encodeURIComponent(projectId)}`, { method: "DELETE" }),
+    getAnalysisHistory: () => request("/analysis-history?limit=100"),
+    getRiskChanges: () => request("/risk-changes?limit=100"),
     login: (credentials) => request("/auth/login", { method: "POST", body: JSON.stringify(credentials) }),
     register: (profile) => request("/auth/register", { method: "POST", body: JSON.stringify(profile) }),
   };
