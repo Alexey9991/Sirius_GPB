@@ -13,8 +13,8 @@ class Project(SqlAlchemyBase, JsonSerializableMixin):
     selection = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     risk = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     region = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    id = sqlalchemy.Column(
-        sqlalchemy.String, primary_key=True, unique=True, nullable=False, default=lambda: uuid.uuid4().hex)
+    id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, unique=True,
+                           nullable=False, default=lambda: uuid.uuid4().hex)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     city = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     district = sqlalchemy.Column(sqlalchemy.String, nullable=True)
