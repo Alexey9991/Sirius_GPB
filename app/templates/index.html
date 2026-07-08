@@ -3,30 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Risk Intelligence</title>
+  <title>GPB Risk Desk</title>
   <style>/*__STYLES__*/</style>
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
       <a class="brand route-link" href="#dashboard" aria-label="На главную">
-        <span class="brand-mark">G</span>
-        <span><b>Газпромбанк</b></span>
+        <span class="brand-mark">GPB</span>
+        <span><b>Risk Desk</b><small>Недвижимость и импакт-сигналы</small></span>
       </a>
 
       <label class="global-search">
         <span>⌕</span>
-        <input id="globalSearch" type="search" placeholder="Поиск ЖК, застройщика или события" />
+        <input id="globalSearch" type="search" placeholder="Объект, застройщик, источник или событие" />
       </label>
 
       <div class="top-actions">
         <button class="header-action notification-button" data-route="notifications" aria-label="Открыть уведомления">
-          <span class="header-action-icon" aria-hidden="true">🔔</span>
+          <span class="header-action-icon" aria-hidden="true">!</span>
           <span class="header-action-copy"><b>Уведомления</b><small id="notificationCount">3 новых</small></span>
           <span class="notification-dot"></span>
         </button>
         <button id="profileButton" class="header-action profile-button" data-route="profile" aria-label="Открыть профиль аналитика">
-          <span id="profileAvatar" class="profile-avatar" aria-hidden="true">👤</span>
+          <span id="profileAvatar" class="profile-avatar" aria-hidden="true">АИ</span>
           <span class="header-action-copy"><b id="profileName">Анна Иванова</b><small>Профиль аналитика</small></span>
         </button>
       </div>
@@ -34,19 +34,19 @@
 
     <nav class="nav-strip" aria-label="Основная навигация">
       <a class="nav-card route-link" href="#dashboard" data-route="dashboard">
-        <span class="nav-icon">⌕</span><span><b>Проверить ЖК</b><small>Запуск анализа объекта</small></span>
+        <span class="nav-icon">01</span><span><b>Мониторинг</b><small>Запуск проверки объекта</small></span>
       </a>
       <a class="nav-card route-link ai-nav-card" href="#ai-analysis" data-route="ai-analysis">
-        <span class="nav-icon">AI</span><span><b>ИИ-анализ</b><small>Объяснение влияния новостей</small></span>
+        <span class="nav-icon">02</span><span><b>Разбор события</b><small>Объяснение влияния новостей</small></span>
       </a>
       <a class="nav-card route-link" href="#projects" data-route="projects">
-        <span class="nav-icon">▦</span><span><b>Проекты</b><small>Портфель объектов банка</small></span>
+        <span class="nav-icon">03</span><span><b>Объекты</b><small>Портфель банка</small></span>
       </a>
       <a class="nav-card route-link" href="#news" data-route="news">
-        <span class="nav-icon">◷</span><span><b>Лента новостей</b><small>Новости, риски и жалобы</small></span>
+        <span class="nav-icon">04</span><span><b>Поток</b><small>Новости, риски и жалобы</small></span>
       </a>
       <a class="nav-card route-link" href="#history" data-route="history">
-        <span class="nav-icon">↺</span><span><b>История</b><small>Анализы и динамика риска</small></span>
+        <span class="nav-icon">05</span><span><b>Журнал</b><small>Анализы и динамика риска</small></span>
       </a>
     </nav>
 
