@@ -3,7 +3,8 @@ streamlit
 pandas
 uvicorn[standard]
 flask
-flask_cors
+flask-cors
 requests
 beautifulsoup4
 werkzeug
+psycopg2-binary
