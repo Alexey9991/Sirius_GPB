@@ -22,8 +22,8 @@ FRONTEND_FILES = (
 
 
 st.set_page_config(
-    page_title="GazprombankRAGanalys",
-    page_icon="🏦",
+    page_title="GPB Risk Desk",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -31,11 +31,43 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-      .stApp { background: #f4f7fb; }
-      .block-container { max-width: 100%; padding: 0; }
+      html, body, .stApp, div[data-testid="stAppViewContainer"] {
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: #f4f7fb !important;
+      }
+      .block-container {
+        max-width: 100% !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      div[data-testid="stVerticalBlock"],
+      div[data-testid="stVerticalBlockBorderWrapper"],
+      div[data-testid="stElementContainer"] {
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      div[data-testid="stElementContainer"]:has(style) {
+        display: none !important;
+      }
       header[data-testid="stHeader"], #MainMenu, footer,
-      div[data-testid="stToolbar"] { display: none !important; }
-      iframe { display: block; }
+      div[data-testid="stToolbar"], div[data-testid="stDecoration"] {
+        display: none !important;
+      }
+      iframe {
+        position: fixed !important;
+        inset: 0 !important;
+        display: block !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        border: 0 !important;
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -90,7 +122,7 @@ def load_frontend() -> str:
 
 def render_frontend() -> None:
     """Render the current frontend sources inside the Streamlit page."""
-    components.html(load_frontend(), height=1600, scrolling=True)
+    components.html(load_frontend(), height=900, scrolling=True)
 
 
 # Streamlit auto-reload for frontend files
