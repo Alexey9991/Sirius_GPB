@@ -22,8 +22,8 @@ FRONTEND_FILES = (
 
 
 st.set_page_config(
-    page_title="GazprombankRAGanalys",
-    page_icon="🏦",
+    page_title="GPB Risk Desk",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
