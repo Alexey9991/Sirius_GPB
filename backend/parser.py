@@ -1,4 +1,4 @@
-from db import db_session
+import db
 from db.__all_models import *
 from news_parsers import import_parsers
 from sqlalchemy.orm import Session
@@ -7,17 +7,11 @@ from datetime import datetime
 
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "dbtest")
-db_session.global_init(os.path.join(DB_PATH, "db.sqlite3"))
-db_sess = db_session.create_session()
+db.global_init(os.path.join(DB_PATH, "db.sqlite3"))
+db_sess = db.create_session()
 db_engine = db_sess.get_bind()
 parsers = import_parsers()
 num_workers = 10
-
-
-with open(os.path.join(DB_PATH, "news.json"), "r", encoding="utf-8") as f:
-    data = json.load(f)
-import_news(data, db_sess)
-db_sess.commit()
 
 
 filepath = os.path.join(DB_PATH, "news_merged_20260624_125713.jsonl")
@@ -30,12 +24,17 @@ save_queue = queue.Queue()
 stop_event = threading.Event()
 
 def reader():
+    from collections import Counter
+    sources = []
     with open(filepath, 'r', encoding='utf-8') as f:
         for line in f:
             if stop_event.is_set():
                 break
             nowost = json.loads(line)
+            sources.append(nowost["source"])
             tasks_queue.put(nowost)
+    print(dict(Counter(sources)))
+    exit()
     for _ in range(num_workers):
         tasks_queue.put(None)
 
@@ -108,9 +107,3 @@ sess_main.close()
 reader_thread.join()
 for t in workers:
     t.join()
-
-
-with open(os.path.join(DB_PATH, "zhk_selected.csv"), "r", encoding="utf-8-sig") as f:
-    data = list(csv.DictReader(f))
-import_projects(data, db_sess)
-db_sess.commit()
