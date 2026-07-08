@@ -4,12 +4,8 @@ import sqlalchemy
 import datetime
 import uuid
 
-from .db_session import SqlAlchemyBase
+from . import SqlAlchemyBase
 from .json_mixin import JsonSerializableMixin
-
-
-class AuthException(Exception):
-    pass
 
 
 class User(SqlAlchemyBase, JsonSerializableMixin):
