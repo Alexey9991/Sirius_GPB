@@ -98,9 +98,17 @@
 
   const storageKeys = {
     favorites: "risk-intelligence:favorites",
-    analysisHistory: "risk-intelligence:analysis-history",
-    riskChanges: "risk-intelligence:risk-changes",
+    analysisHistory: "analysis-history",
+    riskChanges: "risk-changes",
   };
+
+  function activeUserId() {
+    return localStorage.getItem("risk-intelligence:active-user-id") || "u-001";
+  }
+
+  function accountKey(key) {
+    return `risk-intelligence:${activeUserId()}:${key}`;
+  }
 
   function readLocal(key, fallback) {
     try {
@@ -120,7 +128,7 @@
   }
 
   function recordMockAnalysis(analysis) {
-    const history = readLocal(storageKeys.analysisHistory, []);
+    const history = readLocal(accountKey(storageKeys.analysisHistory), []);
     const previous = history.find((item) => item.project_name === analysis.project_name);
     const entry = {
       id: `analysis-${Date.now()}`,
@@ -132,10 +140,10 @@
       model_version: analysis.model_version,
       analyzed_at: analysis.analyzed_at,
     };
-    writeLocal(storageKeys.analysisHistory, [entry, ...history].slice(0, 100));
+    writeLocal(accountKey(storageKeys.analysisHistory), [entry, ...history].slice(0, 100));
 
     if (!previous || previous.level !== analysis.level || previous.score !== analysis.score) {
-      const changes = readLocal(storageKeys.riskChanges, []);
+      const changes = readLocal(accountKey(storageKeys.riskChanges), []);
       changes.unshift({
         id: `risk-${Date.now()}`,
         project_id: analysis.project_id,
@@ -146,7 +154,7 @@
         new_score: analysis.score,
         changed_at: analysis.analyzed_at,
       });
-      writeLocal(storageKeys.riskChanges, changes.slice(0, 100));
+      writeLocal(accountKey(storageKeys.riskChanges), changes.slice(0, 100));
     }
   }
 
@@ -179,8 +187,8 @@
     async removeFavorite(projectId) {
       writeLocal(storageKeys.favorites, mockFavoriteIds().filter((id) => id !== projectId));
     },
-    async getAnalysisHistory() { return readLocal(storageKeys.analysisHistory, []); },
-    async getRiskChanges() { return readLocal(storageKeys.riskChanges, []); },
+    async getAnalysisHistory() { return readLocal(accountKey(storageKeys.analysisHistory), []); },
+    async getRiskChanges() { return readLocal(accountKey(storageKeys.riskChanges), []); },
     async login(credentials) {
       await delay(240);
       return {
