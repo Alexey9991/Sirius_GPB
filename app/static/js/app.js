@@ -31,7 +31,7 @@
   function setActiveNav(route) {
     document.querySelectorAll(".nav-card").forEach((link) => link.classList.toggle("active", link.dataset.route === route));
     document.querySelectorAll(".header-action").forEach((button) => button.classList.toggle("active", button.dataset.route === route));
-    document.title = `${routeTitles[route]} — Risk Intelligence`;
+    document.title = `${routeTitles[route]} — GPB Risk Desk`;
   }
 
   function initials(name) {
@@ -40,7 +40,7 @@
 
   function updateHeaderUser() {
     const user = state.currentUser;
-    document.getElementById("profileAvatar").textContent = user ? "👤" : "→";
+    document.getElementById("profileAvatar").textContent = user ? initials(user.name) : "→";
     document.getElementById("profileName").textContent = user ? user.name : "Войти";
   }
 
@@ -69,7 +69,7 @@
 
   function analysisPanel(data) {
     if (!data) return `
-      <section class="card"><div class="empty-state"><div><div class="empty-icon">⌕</div>
+      <section class="card"><div class="empty-state"><div><div class="empty-icon">?</div>
       Выберите объект из списка или введите название ЖК, чтобы увидеть результат анализа.</div></div></section>`;
     const p = palette[data.level] || palette.GREEN;
     return `
@@ -104,9 +104,9 @@
         <div class="dashboard-grid page-enter">
           <div>
             <section class="hero">
-              <span class="hero-badge">Система обнаружения рисков жилых комплексов</span>
-              <h1>Мониторинг рисков финансирования ЖК</h1>
-              <p>Система анализирует новости, жалобы и открытые источники, чтобы заранее выявлять проблемные объекты и помогать принимать решения.</p>
+              <span class="hero-badge">Рабочая зона мониторинга</span>
+              <h1>Проверка объекта по новостному потоку</h1>
+              <p>Сводка собирает открытые публикации, жалобы и изменения по проекту в один риск-профиль для первичного решения аналитика.</p>
               <form id="analysisForm" class="analysis-form">
                 <input id="projectInput" class="input" autocomplete="off" placeholder="Например: ЖК Северный берег" />
                 <button id="analyzeButton" class="primary-btn" type="submit">Анализировать</button>
@@ -470,7 +470,7 @@
                   <button class="secondary-btn" data-route="ai-analysis">Перейти к ИИ-анализу</button>
                 </div>
               </section>
-              <section class="card push-card"><div class="push-icon">🔔</div><h2>Push-уведомления</h2><p>Получайте системное уведомление, когда появляется критическая новость по проекту.</p><div class="push-status ${state.pushEnabled ? "enabled" : ""}"><i></i>${state.pushEnabled ? "Включены" : "Выключены"}</div><button id="pushToggle" class="${state.pushEnabled ? "secondary-btn" : "primary-btn"}">${state.pushEnabled ? "Выключить push" : "Включить push"}</button>${state.pushEnabled ? '<button id="testPush" class="text-link push-test">Проверить уведомление</button>' : ""}</section>
+              <section class="card push-card"><div class="push-icon">!</div><h2>Push-уведомления</h2><p>Получайте системное уведомление, когда появляется критическая новость по проекту.</p><div class="push-status ${state.pushEnabled ? "enabled" : ""}"><i></i>${state.pushEnabled ? "Включены" : "Выключены"}</div><button id="pushToggle" class="${state.pushEnabled ? "secondary-btn" : "primary-btn"}">${state.pushEnabled ? "Выключить push" : "Включить push"}</button>${state.pushEnabled ? '<button id="testPush" class="text-link push-test">Проверить уведомление</button>' : ""}</section>
               <section class="card"><div class="card-head"><h2>Каналы</h2></div><div class="detail-list"><div class="detail-row"><span>В приложении</span><b>Включены</b></div><div class="detail-row"><span>Push в браузере</span><b>${state.pushEnabled ? "Включены" : "Выключены"}</b></div><div class="detail-row"><span>Email-сводка</span><b>Ежедневно</b></div></div></section>
             </aside>
           </div>
