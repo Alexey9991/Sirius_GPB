@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from sqlalchemy import func, or_, text
 
-from db import db_session
+from db import db_session, TABLES
 from db.__all_models import Project, News
 
 
@@ -356,45 +356,28 @@ def overview(db_sess):
         return error_response(str(e), 500)
 
 
-@app.get("/search")
+@app.get("/search/<table>")
 @db_session_wrapper
-def search(db_sess):
+def search(db_sess, table):
     """Search across projects and news.
-    
+
     Query Parameters:
     - q: search query (required)
-    - type: search type (projects, news, all) - default: all
-    - limit: max results - default: 20
-    """
+    - stype: search by a specific type (required)
+    - limit: max results - default: 20"""
     try:
-        query_string = request.args.get("q", "").strip()
-        search_type = request.args.get("type", "all")
+        query_string = request.args.get("q")
+        stype = request.args.get("stype")
         limit = request.args.get("limit", 20, type=int)
         if not query_string:
             return error_response("Search query is required", 400)
-        if not 1 <= limit <= 100:
-            limit = 20
+        if not stype:
+            return error_response("Specific type is required", 400)
 
-        results = {
-            "query": query_string,
-            "projects": [],
-            "news": [],
-        }
-
-        if search_type in ("all", "projects"):
-            projects = db_sess.query(Project).filter(
-                or_(func.lower(Project.name).contains(query_string.lower()),
-                    func.lower(Project.city).contains(query_string.lower()),
-                    func.lower(Project.developer).contains(query_string.lower()),
-            )).limit(limit).all()
-            results["projects"] = [p.to_dict() for p in projects]
-
-        if search_type in ("all", "news"):
-            news = db_sess.query(News).filter(
-                or_(func.lower(News.title).contains(query_string.lower()),
-                    func.lower(News.content).contains(query_string.lower()),
-            )).order_by(News.date.desc()).limit(limit).all()
-            results["news"] = [n.to_dict() for n in news]
+        results = db_sess.query(TABLES[table]).filter(
+            func.lower(getattr(TABLES[table], stype)).contains(
+                query_string.lower())).limit(limit).all()
+        results = [n.to_dict() for n in results]
 
         return json_response(results), 200
     except Exception as e:
@@ -414,8 +397,5 @@ def server_error(e):
 
 
 if __name__ == "__main__":
-    app.run(
-        host=os.getenv("API_HOST", "0.0.0.0"),
-        port=int(os.getenv("API_PORT", 8000)),
-        debug=os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
-    )
+    app.run(host=os.getenv("API_HOST", "0.0.0.0"),
+            port=int(os.getenv("API_PORT", 8000)))
