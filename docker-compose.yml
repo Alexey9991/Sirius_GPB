@@ -1,8 +1,8 @@
 services:
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: siriusgpb-backend
     ports:
       - "8000:8000"
@@ -11,13 +11,11 @@ services:
     volumes:
       - ./backend:/backend
       - ./backend/dbtest:/backend/dbtest
-    depends_on:
-      - backend
 
   app:
     build:
-      context: ./app
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: app/Dockerfile
     container_name: siriusgpb-app
     ports:
       - "8501:8501"

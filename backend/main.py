@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from datetime import datetime
 from functools import wraps
 
@@ -7,7 +6,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from sqlalchemy import func, or_, text
 
-from db import db_session, TABLES
+import db
 from db.__all_models import Project, News
 
 
@@ -26,22 +25,18 @@ REVERSE_RISK = {
     "мониторинг": "GREEN",
 }
 
-
-
 app = Flask(__name__)
 app.config.update(API_TITLE="Risk Intelligence API", API_VERSION="1.0.0", JSON_SORT_KEYS=False)
 CORS(app, resources={r"/api/*": {"origins": "*"}, r"/health": {"origins": "*"}},
      methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type"], supports_credentials=False)
 
-DB_FILE = os.getenv("DB_FILE", os.path.join(Path(__file__).parent, "dbtest", "db.sqlite3"))
-
+# Database initialization - uses environment variables from .env.backend
 try:
-    db_session.global_init(DB_FILE)
-    print(f"✓ Database initialized at {DB_FILE}")
+    db.global_init()
+    print(f"✓ Database initialized successfully")
 except Exception as e:
     print(f"✗ Database initialization error: {e}")
     raise
-
 
 
 def json_response(payload, status=200):
@@ -59,7 +54,7 @@ def error_response(message, status=400):
 def db_session_wrapper(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        db_sess = db_session.create_session()
+        db_sess = db.create_session()
         try:
             result = f(db_sess, *args, **kwargs)
             db_sess.commit()
@@ -72,12 +67,11 @@ def db_session_wrapper(f):
     return decorated_function
 
 
-
 @app.get("/health")
 def health():
     try:
-        db_sess = db_session.create_session()
-        db_sess.execute("SELECT 1")
+        db_sess = db.create_session()
+        db_sess.execute(text("SELECT 1"))
         db_sess.close()
         return {"status": "ok", "database": "connected"}, 200
     except Exception as e:
@@ -87,7 +81,7 @@ def health():
 @app.get("/status")
 def status():
     try:
-        db_sess = db_session.create_session()
+        db_sess = db.create_session()
         projects_count = db_sess.query(Project).count()
         news_count = db_sess.query(News).count()
         critical_count = db_sess.query(Project).filter(
@@ -374,15 +368,14 @@ def search(db_sess, table):
         if not stype:
             return error_response("Specific type is required", 400)
 
-        results = db_sess.query(TABLES[table]).filter(
-            func.lower(getattr(TABLES[table], stype)).contains(
+        results = db_sess.query(db.TABLES[table]).filter(
+            func.lower(getattr(db.TABLES[table], stype)).contains(
                 query_string.lower())).limit(limit).all()
         results = [n.to_dict() for n in results]
 
         return json_response(results), 200
     except Exception as e:
         return error_response(str(e), 400)
-
 
 
 @app.errorhandler(404)
@@ -393,7 +386,6 @@ def not_found(e):
 @app.errorhandler(500)
 def server_error(e):
     return error_response("Internal server error", 500)
-
 
 
 if __name__ == "__main__":
