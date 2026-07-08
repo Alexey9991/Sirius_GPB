@@ -1,5 +1,7 @@
 # dbtest/
 .env
+.env.app
+.env.backend
 __pycache__/
 *.py[cod]
 .venv/
