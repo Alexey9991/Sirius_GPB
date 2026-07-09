@@ -1,0 +1,89 @@
+.projects-page .card {
+  margin-bottom: 0;
+}
+
+.project-table {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.project-table-head,
+.project-table-row {
+  min-width: 920px;
+  display: grid;
+  grid-template-columns: minmax(210px, 1.35fr) minmax(130px, .75fr) minmax(170px, 1fr) 120px 92px 130px 100px;
+  align-items: center;
+}
+
+.project-table-head {
+  background: #f6f8fa;
+  border-bottom: 1px solid var(--line);
+}
+
+.project-table-head .sort-button {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: #5d6874;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.project-table-body {
+  display: grid;
+}
+
+.project-table-row {
+  border: 0;
+  border-bottom: 1px solid #edf0f4;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-table-row:last-child {
+  border-bottom: 0;
+}
+
+.project-table-row:hover {
+  background: #f7faff;
+}
+
+.project-table-row > span {
+  min-width: 0;
+  padding: 13px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.project-table-row .project-name-cell {
+  color: var(--ink);
+  font-weight: 850;
+}
+
+.project-table-row .progress {
+  min-width: 0;
+}
+
+.project-table-row .progress-line {
+  width: 100%;
+  min-width: 84px;
+}
+
+@media (max-width: 720px) {
+  .project-table-head,
+  .project-table-row {
+    min-width: 860px;
+    grid-template-columns: 190px 120px 155px 110px 86px 120px 90px;
+  }
+}
