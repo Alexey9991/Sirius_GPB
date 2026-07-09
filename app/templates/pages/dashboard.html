@@ -1,0 +1,25 @@
+<template id="template-dashboard">
+  <div class="dashboard-grid page-enter">
+    <div>
+      <section class="hero">
+        <span class="hero-badge">Мониторинг</span>
+        <h1>Проверка объекта по новостному потоку</h1>
+        <p>Сводка собирает открытые публикации, жалобы и изменения по проекту в один риск-профиль для первичного решения аналитика.</p>
+        <form id="analysisForm" class="analysis-form">
+          <input id="projectInput" class="input" autocomplete="off" placeholder="Например: ЖК Северный берег" />
+          <button id="analyzeButton" class="primary-btn" type="submit">Анализировать</button>
+        </form>
+      </section>
+      <section class="card">
+        <div class="card-head">
+          <h2>История поиска</h2>
+          <div class="card-actions">
+            <button class="text-link" data-route="history">Вся история</button>
+          </div>
+        </div>
+        <div class="search-history-list">[[SEARCH_HISTORY_ROWS]]</div>
+      </section>
+    </div>
+    <aside id="resultPanel" class="result-panel">[[ANALYSIS_PANEL]]</aside>
+  </div>
+</template>
