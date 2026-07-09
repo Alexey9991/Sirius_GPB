@@ -1,7 +1,5 @@
 sqlalchemy
-streamlit
 pandas
-uvicorn[standard]
 flask
 flask-cors
 requests
