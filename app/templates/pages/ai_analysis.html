@@ -1,0 +1,27 @@
+<template id="template-ai-analysis">
+  <div class="page-enter">
+    <header class="page-heading ai-page-heading">
+      <div>
+        <span class="eyebrow">ИИ-анализ</span>
+        <h1>ИИ-анализ всех новостей</h1>
+        <p>Модель берёт в контекст всю ленту новостей, все ЖК и связанные риск-сигналы.</p>
+      </div>
+    </header>
+    <div class="ai-general-layout">
+      <section class="card ai-question-card">
+        <div class="selected-news">
+          <span class="selected-news-label">Контекст ИИ</span>
+          <h2>[[PROJECTS_COUNT]] объектов · [[EVENTS_COUNT]] новостей</h2>
+          <p>ИИ смотрит всю ленту целиком: критические, средние и низкие сигналы, источники, города, застройщиков и связанные ЖК.</p>
+        </div>
+        <form id="aiQuestionForm">
+          <label for="aiQuestion">Фокус для ИИ-вывода</label>
+          <textarea id="aiQuestion" placeholder="Например: какие ЖК сейчас самые рискованные по всем новостям?" required minlength="5">[[PENDING_QUESTION]]</textarea>
+          <div class="question-suggestions">[[SUGGESTIONS]]</div>
+          <button id="askAiButton" class="primary-btn ai-submit-large" type="submit">Запустить ИИ-анализ</button>
+        </form>
+      </section>
+      <section id="aiImpactResult" class="card ai-result-card">[[STREAM_RESULT]]</section>
+    </div>
+  </div>
+</template>
