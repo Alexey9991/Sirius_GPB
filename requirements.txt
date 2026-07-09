@@ -7,3 +7,11 @@ flask_cors
 requests
 beautifulsoup4
 werkzeug
+openai
+pydantic
+numpy
+joblib
+nltk
+pymorphy3
+scipy
+scikit-learn
