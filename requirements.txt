@@ -1,8 +1,16 @@
 sqlalchemy
 pandas
 flask
-flask-cors
+flask_cors
 requests
 beautifulsoup4
 werkzeug
+openai
+pydantic
+numpy
+joblib
+nltk
+pymorphy3
+scipy
+scikit-learn
 psycopg2-binary
