@@ -2,34 +2,23 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: backend/Dockerfile
     container_name: siriusgpb-backend
     ports:
       - "8000:8000"
-    environment:
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
-      - FLASK_DEBUG=false
-      - DB_PATH=/backend/dbtest
-      - DB_FILE=/backend/dbtest/db.sqlite3
+    env_file:
+      - .env.backend
     volumes:
       - ./backend:/backend
-      - ./backend/dbtest:/backend/dbtest
 
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: app/Dockerfile
     container_name: siriusgpb-app
     ports:
-      - "8501:8501"
-    environment:
-      - API_BASE_URL=http://backend:8000/api/v1
-      - USE_MOCK_API=false
-      - DEV_AUTO_RELOAD=true
+      - "5000:5000"
     volumes:
       - ./app:/app
     depends_on:
       - backend
-    stdin_open: true
-    tty: true
