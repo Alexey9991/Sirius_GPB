@@ -10,7 +10,6 @@ services:
       - .env.backend
     volumes:
       - ./backend:/backend
-      - ./backend/dbtest:/backend/dbtest
 
   app:
     build:
@@ -18,12 +17,8 @@ services:
       dockerfile: app/Dockerfile
     container_name: siriusgpb-app
     ports:
-      - "8501:8501"
-    env_file:
-      - .env.app
+      - "5000:5000"
     volumes:
       - ./app:/app
     depends_on:
       - backend
-    stdin_open: true
-    tty: true
