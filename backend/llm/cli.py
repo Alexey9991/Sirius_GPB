@@ -7,11 +7,11 @@ def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', default='df.csv')
     parser.add_argument('--output', default='impact_signals.csv')
-    parser.add_argument('--prompt', default='untitled7_5_prompt.txt')
+    parser.add_argument('--prompt', default='prompt.txt')
     parser.add_argument('--api-key', default=None)
     parser.add_argument('--model', default='deepseek-chat')
-    parser.add_argument('--classifier-model', default='classifier_model.pkl')
-    parser.add_argument('--tfidf', default='tfidf_vectorizer.pkl')
+    parser.add_argument('--classifier-model', default='models/classifier_model.pkl')
+    parser.add_argument('--tfidf', default='models/tfidf_vectorizer.pkl')
     parser.add_argument('--text-column', default='content')
     return parser
 
