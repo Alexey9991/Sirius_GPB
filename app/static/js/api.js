@@ -20,11 +20,11 @@
   ];
 
   const events = [
-    { id: "e-001", project_name: "ЖК Северный берег", title: "Прокуратура начала проверку застройщика", summary: "Ведомство проверяет соблюдение сроков и использование средств дольщиков.", category: "Юридический риск", sentiment: "NEGATIVE", level: "RED", source: "Регион Онлайн", published_at: "2026-07-03T08:42:00+05:00", source_url: "#" },
-    { id: "e-002", project_name: "ЖК Новые высоты", title: "Покупатели сообщают о замедлении строительных работ", summary: "В открытых источниках растёт число сообщений о снижении активности на площадке.", category: "Сроки", sentiment: "NEGATIVE", level: "YELLOW", source: "Недвижимость сегодня", published_at: "2026-07-03T08:15:00+05:00", source_url: "#" },
-    { id: "e-003", project_name: "ЖК Северный берег", title: "Срок сдачи корпуса перенесён на шесть месяцев", summary: "Застройщик обновил проектную декларацию и новый график ввода.", category: "Сроки", sentiment: "NEGATIVE", level: "RED", source: "Городские новости", published_at: "2026-07-03T07:20:00+05:00", source_url: "#" },
-    { id: "e-004", project_name: "ЖК Солнечный парк", title: "Строительная готовность нового корпуса достигла 91%", summary: "Работы идут по графику, разрешительная документация актуальна.", category: "Строительство", sentiment: "POSITIVE", level: "GREEN", source: "Строительный портал", published_at: "2026-07-03T06:50:00+05:00", source_url: "#" },
-    { id: "e-005", project_name: "ЖК Лесной квартал", title: "Застройщик обсуждает корректировку графика работ", summary: "Критических изменений в проектной декларации пока не опубликовано.", category: "Сроки", sentiment: "NEUTRAL", level: "YELLOW", source: "Рынок недвижимости", published_at: "2026-07-03T06:10:00+05:00", source_url: "#" },
+    { id: "e-001", project_name: "ЖК Северный берег", title: "Прокуратура начала проверку застройщика", summary: "Ведомство проверяет соблюдение сроков и использование средств дольщиков.", category: "Юридический риск", sentiment: "NEGATIVE", level: "RED", source: "Коммерсантъ Недвижимость", published_at: "2026-07-03T08:42:00+05:00", source_url: "https://www.kommersant.ru/realty" },
+    { id: "e-002", project_name: "ЖК Речной порт", title: "Покупатели сообщают о замедлении строительных работ", summary: "В открытых источниках растёт число сообщений о снижении активности на площадке.", category: "Сроки", sentiment: "NEGATIVE", level: "YELLOW", source: "РБК Недвижимость", published_at: "2026-07-03T08:15:00+05:00", source_url: "https://realty.rbc.ru/" },
+    { id: "e-003", project_name: "ЖК Новые высоты", title: "Срок сдачи корпуса перенесён на шесть месяцев", summary: "Застройщик обновил проектную декларацию и новый график ввода.", category: "Сроки", sentiment: "NEGATIVE", level: "RED", source: "ЕИСЖС / наш.дом.рф", published_at: "2026-07-03T07:20:00+05:00", source_url: "https://наш.дом.рф/" },
+    { id: "e-004", project_name: "ЖК Солнечный парк", title: "Строительная готовность нового корпуса достигла 91%", summary: "Работы идут по графику, разрешительная документация актуальна.", category: "Строительство", sentiment: "POSITIVE", level: "GREEN", source: "ЕРЗ.РФ", published_at: "2026-07-03T06:50:00+05:00", source_url: "https://erzrf.ru/" },
+    { id: "e-005", project_name: "ЖК Лесной квартал", title: "Застройщик обсуждает корректировку графика работ", summary: "Критических изменений в проектной декларации пока не опубликовано.", category: "Сроки", sentiment: "NEUTRAL", level: "YELLOW", source: "Интерфакс Недвижимость", published_at: "2026-07-03T06:10:00+05:00", source_url: "https://www.interfax.ru/realty/" },
   ];
 
   function analysisFor(projectName) {
@@ -97,7 +97,6 @@
   }
 
   const storageKeys = {
-    favorites: "risk-intelligence:favorites",
     analysisHistory: "analysis-history",
     riskChanges: "risk-changes",
   };
@@ -121,10 +120,6 @@
 
   function writeLocal(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
-  }
-
-  function mockFavoriteIds() {
-    return readLocal(storageKeys.favorites, projects.slice(0, 4).map((project) => project.id));
   }
 
   function recordMockAnalysis(analysis) {
@@ -160,8 +155,7 @@
 
   const mocks = {
     async getOverview() {
-      const favoriteIds = new Set(mockFavoriteIds());
-      return { stats: { projects_total: 42, critical_projects: 5, events_today: 1847, sources_online: 126 }, favorites: projects.filter((project) => favoriteIds.has(project.id)), recent_events: events.slice(0, 4) };
+      return { stats: { projects_total: 42, critical_projects: 5, events_today: 1847, sources_online: 126 }, recent_events: events.slice(0, 4) };
     },
     async analyze(projectName) {
       await delay(280);
@@ -176,17 +170,6 @@
     },
     async getEvents() { return events; },
     async explainImpact(eventId, question) { await delay(420); return impactFor(eventId, question); },
-    async getFavorites() {
-      const favoriteIds = new Set(mockFavoriteIds());
-      return projects.filter((project) => favoriteIds.has(project.id));
-    },
-    async addFavorite(projectId) {
-      writeLocal(storageKeys.favorites, [...new Set([...mockFavoriteIds(), projectId])]);
-      return projects.find((project) => project.id === projectId);
-    },
-    async removeFavorite(projectId) {
-      writeLocal(storageKeys.favorites, mockFavoriteIds().filter((id) => id !== projectId));
-    },
     async getAnalysisHistory() { return readLocal(accountKey(storageKeys.analysisHistory), []); },
     async getRiskChanges() { return readLocal(accountKey(storageKeys.riskChanges), []); },
     async login(credentials) {
@@ -231,9 +214,6 @@
     getProjects: (query = "", level = "ALL") => request(`/projects?query=${encodeURIComponent(query)}&level=${encodeURIComponent(level)}`),
     getEvents: () => request("/events?limit=100"),
     explainImpact: (eventId, question) => request("/ai/impact", { method: "POST", body: JSON.stringify({ event_id: eventId, question }) }),
-    getFavorites: () => request("/favorites"),
-    addFavorite: (projectId) => request(`/favorites/${encodeURIComponent(projectId)}`, { method: "POST" }),
-    removeFavorite: (projectId) => request(`/favorites/${encodeURIComponent(projectId)}`, { method: "DELETE" }),
     getAnalysisHistory: () => request("/analysis-history?limit=100"),
     getRiskChanges: () => request("/risk-changes?limit=100"),
     login: (credentials) => request("/auth/login", { method: "POST", body: JSON.stringify(credentials) }),

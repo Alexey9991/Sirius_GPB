@@ -2,9 +2,10 @@
 (function () {
   const app = document.getElementById("app");
   const globalSearch = document.getElementById("globalSearch");
+  const notificationOverlay = document.getElementById("notificationOverlay");
   const defaultUser = { id: "u-001", name: "Анна Иванова", email: "a.ivanova@gpb.ru", role: "Аналитик рисков", department: "Проектное финансирование" };
   const defaultSubscriptions = { locations: ["Москва", "Екатеринбург"], developers: ["ГК Север Девелопмент"], projects: ["ЖК Северный берег"] };
-  const state = { overview: null, analysis: null, streamInsight: null, pendingInsightQuestion: "", selectedImpactEventId: "", alerts: [], projects: [], events: [], notifications: [], analysisHistory: [], riskChanges: [], favoriteIds: new Set(), pendingAnalysis: "", searchQuery: "", projectSort: "risk-desc", subscriptions: readUserSubscriptions(defaultUser.id), pushEnabled: localStorage.getItem("risk-intelligence:push-enabled") === "true" && "Notification" in window && Notification.permission === "granted", currentUser: defaultUser };
+  const state = { overview: null, analysis: null, streamInsight: null, pendingInsightQuestion: "", selectedImpactEventId: "", alerts: [], projects: [], events: [], notifications: [], notificationsInitialized: false, analysisHistory: [], riskChanges: [], pendingAnalysis: "", pendingProjectContext: null, searchQuery: "", projectSort: "risk-desc", subscriptions: readUserSubscriptions(defaultUser.id), pushEnabled: localStorage.getItem("risk-intelligence:push-enabled") === "true" && "Notification" in window && Notification.permission === "granted", currentUser: defaultUser };
   const routeTitles = {
     dashboard: "Мониторинг", "ai-analysis": "ИИ-анализ потока", projects: "Объекты", news: "Поток",
     history: "Журнал", notifications: "Уведомления", profile: "Профиль аналитика", search: "Поиск", login: "Вход", register: "Регистрация",
@@ -100,6 +101,11 @@
     return state.projects.find((project) => project.name === projectName);
   }
 
+  function projectAnalyzeAttrs(project) {
+    if (!project) return "";
+    return `data-analyze-id="${esc(project.id || "")}" data-analyze-name="${esc(project.name || project.project_name || "")}" data-analyze-city="${esc(project.city || "")}" data-analyze-developer="${esc(project.developer || "")}"`;
+  }
+
   function isSubscribed(item) {
     const subscriptions = state.subscriptions || defaultSubscriptions;
     const project = item.city && item.developer ? item : projectByName(item.project_name || item.name);
@@ -116,9 +122,41 @@
     return Object.values(item).filter((value) => typeof value === "string" || typeof value === "number").join(" ").toLowerCase();
   }
 
+  function riskIndexSummary(data) {
+    const drivers = [...(data?.drivers || [])].sort((a, b) => Number(b.value) - Number(a.value));
+    const main = drivers[0];
+    const second = drivers[1];
+    const levelText = data.level === "RED"
+      ? "Индекс высокий: объект требует ручной проверки и контроля свежих публикаций."
+      : data.level === "YELLOW"
+        ? "Индекс средний: критических сигналов нет, но объект лучше оставить в наблюдении."
+        : "Индекс низкий: существенных негативных сигналов в текущем потоке не видно.";
+    const driverText = main
+      ? `Главный фактор: ${main.name.toLowerCase()} (${Number(main.value)}%).${second ? ` Дополнительно влияет ${second.name.toLowerCase()} (${Number(second.value)}%).` : ""}`
+      : "Факторы риска не выделены.";
+    return `
+      <div class="risk-summary">
+        <b>Краткая сводка индекса</b>
+        <p>${esc(levelText)} ${esc(driverText)}</p>
+      </div>`;
+  }
+
+  function sourceCards(items) {
+    return (items || []).map((event) => `
+      <article class="source-card">
+        <div>
+          <span>${chip(event.level)}</span>
+          <time>${dateTime(event.published_at)}</time>
+        </div>
+        <h4>${esc(event.title)}</h4>
+        <p>${esc(event.summary || event.category || "Событие из новостного потока")}</p>
+        <footer><span>${esc(event.project_name)} · ${esc(event.source)}</span><a href="${esc(event.source_url || "#")}" target="_blank" rel="noopener">Открыть источник</a></footer>
+      </article>`).join("");
+  }
+
   function projectRows(items) {
     return items.map((p) => `
-      <button class="object-row" data-analyze="${esc(p.name)}">
+      <button class="object-row" ${projectAnalyzeAttrs(p)}>
         <span class="object-avatar">${esc(p.name.replace("ЖК ", "").split(" ").map((x) => x[0]).join("").slice(0, 2))}</span>
         <span><span class="object-name">${esc(p.name)}</span><span class="object-meta">${esc(p.city)} · ${esc(p.developer)}</span></span>
         <span class="score">${p.score}<small>/100</small></span>${chip(p.level)}
@@ -140,11 +178,7 @@
           <div class="score-ring"><span>${Number(data.score)}</span></div>
           <div class="score-copy"><b>Индекс риска</b><br>Скоринг по новостям, жалобам, юридическим и операционным сигналам.</div>
         </div>
-        <div>${data.drivers.map((d) => `
-          <div class="driver" style="--ring-color:${p.color}">
-            <div class="driver-top"><span>${esc(d.name)}</span><span>${Number(d.value)}%</span></div>
-            <small>${esc(d.text)}</small><div class="bar"><span style="width:${Number(d.value)}%"></span></div>
-          </div>`).join("")}</div>
+        ${riskIndexSummary(data)}
       </section>
       <section class="card">
         <div class="card-head"><h2>События</h2><button class="text-link" data-route="news">Вся лента</button></div>
@@ -157,13 +191,14 @@
     loading();
     try {
       state.overview ||= await window.api.getOverview();
+      if (!state.projects.length) state.projects = await window.api.getProjects();
       const data = state.overview;
-      state.favoriteIds = new Set(data.favorites.map((project) => project.id));
+      const priorityProjects = sortProjects(state.projects).slice(0, 4);
       app.innerHTML = `
         <div class="dashboard-grid page-enter">
           <div>
             <section class="hero">
-              <span class="hero-badge">Рабочая зона мониторинга</span>
+              <span class="hero-badge">Мониторинг</span>
               <h1>Проверка объекта по новостному потоку</h1>
               <p>Сводка собирает открытые публикации, жалобы и изменения по проекту в один риск-профиль для первичного решения аналитика.</p>
               <form id="analysisForm" class="analysis-form">
@@ -171,12 +206,12 @@
                 <button id="analyzeButton" class="primary-btn" type="submit">Анализировать</button>
               </form>
               <div class="samples">
-                ${data.favorites.slice(0, 3).map((p) => `<button class="sample" data-analyze="${esc(p.name)}">${esc(p.name)}</button>`).join("") || '<span class="object-meta">Добавьте проекты в избранное</span>'}
+                ${priorityProjects.slice(0, 3).map((p) => `<button class="sample" ${projectAnalyzeAttrs(p)}>${esc(p.name)}</button>`).join("")}
               </div>
             </section>
             <section class="card">
-              <div class="card-head"><h2>Избранные объекты</h2><div class="card-actions"><button class="text-link" data-route="history">История</button><button class="text-link" data-route="projects">Все объекты</button></div></div>
-              <div class="object-list">${projectRows(data.favorites) || '<div class="compact-empty">Пока ничего не сохранено. Откройте проекты и нажмите звезду рядом с нужным объектом.</div>'}</div>
+              <div class="card-head"><h2>Приоритетные объекты</h2><div class="card-actions"><button class="text-link" data-route="history">История</button><button class="text-link" data-route="projects">Все объекты</button></div></div>
+              <div class="object-list">${projectRows(priorityProjects) || '<div class="compact-empty">Объекты пока не найдены.</div>'}</div>
             </section>
           </div>
           <aside id="resultPanel" class="result-panel">${analysisPanel(state.analysis)}</aside>
@@ -186,18 +221,40 @@
       });
       if (pendingAnalysis) {
         document.getElementById("projectInput").value = pendingAnalysis;
-        analyze(pendingAnalysis);
+        analyze(pendingAnalysis, state.pendingProjectContext || {});
+        state.pendingProjectContext = null;
       }
     } catch (error) { renderError(error); }
   }
 
-  async function analyze(projectName) {
+  async function analyze(projectName, projectContext = {}) {
     const value = String(projectName || "").trim();
     if (!value) return showToast("Введите название жилого комплекса");
+
+    const request = projectContext?.projectId
+      ? {
+          project_id: projectContext.projectId,
+          project_name: value,
+          city: projectContext.city || "",
+          developer: projectContext.developer || "",
+        }
+      : value;
+
+    console.log("НА АНАЛИЗ УШЛО:", request);
+
     const button = document.getElementById("analyzeButton");
     if (button) { button.disabled = true; button.textContent = "Анализируем…"; }
     try {
-      state.analysis = await window.api.analyze(value);
+      try {
+        state.analysis = await window.api.analyze(request);
+      } catch (apiError) {
+        if (typeof request === "object") {
+          console.warn("Backend не принял project_id, fallback на анализ по названию", apiError);
+          state.analysis = await window.api.analyze(value);
+        } else {
+          throw apiError;
+        }
+      }
       state.analysisHistory = [];
       state.riskChanges = [];
       const panel = document.getElementById("resultPanel");
@@ -238,6 +295,9 @@
     }, {});
     const developerHotspot = Object.entries(developerStats)
       .sort((a, b) => b[1].critical - a[1].critical || b[1].total - a[1].total)[0];
+    const evidenceEvents = [...scopedEvents]
+      .sort((a, b) => levelRank(b.level) - levelRank(a.level) || new Date(b.published_at) - new Date(a.published_at))
+      .slice(0, 4);
     const verdict = critical.length
       ? `В потоке есть ${critical.length} критических сигнала`
       : medium.length
@@ -285,16 +345,18 @@
       }),
       projects: rankedProjects.slice(0, 5),
       events: scopedEvents.slice(0, 5),
+      sources: evidenceEvents,
       generated_at: new Date().toISOString(),
     };
   }
 
   function streamInsightResult(data) {
-    if (!data) return `<div class="ai-empty"><span>AI</span><b>Запустите ИИ-анализ всех новостей</b><p>ИИ берёт в контекст весь доступный новостной поток, все ЖК, застройщиков, города и категории риска. Вопрос нужен только для фокуса вывода.</p></div>`;
+    if (!data) return `<div class="ai-empty"><span>AI</span><b>Запустите ИИ-анализ всех новостей</b><p>ИИ берёт в контекст весь доступный новостной поток, все ЖК, застройщиков, города и категории риска.</p></div>`;
     const hasCritical = data.events.some((event) => event.level === "RED");
     const focus = data.query ? `Фокус: ${data.query}` : "Фокус: общая оценка потока";
     const metrics = data.metrics || [];
     const priorities = data.priorities || [];
+    const sources = data.sources || data.events || [];
     return `
       <div class="ai-report page-enter">
         <div class="ai-report-header">
@@ -306,7 +368,7 @@
               <p>${esc(focus)}</p>
             </div>
           </div>
-          <div class="ai-confidence ${hasCritical ? "danger" : "stable"}"><b>${data.confidence}%</b><span>уверенность</span></div>
+          <div class="ai-confidence ${hasCritical ? "danger" : "stable"}"><b>${data.confidence}%</b><span>риск</span></div>
         </div>
         <div class="ai-metrics">
           ${metrics.map((item) => `<div class="ai-metric ${esc(item.tone)}"><span>${esc(item.label)}</span><b>${esc(item.value)}</b><small>${esc(item.hint)}</small></div>`).join("")}
@@ -321,10 +383,14 @@
         </div>
         <div class="ai-priority-list">
           <h3>Приоритетные объекты</h3>
-          ${priorities.map((project, index) => `<button class="ai-priority-card" data-analyze="${esc(project.name)}"><span>${index + 1}</span><div><b>${esc(project.name)}</b><small>${esc(project.city)} · ${esc(project.developer)}</small><em>${esc(project.signal)}</em></div><strong>${project.score}/100</strong>${chip(project.level)}</button>`).join("") || '<div class="compact-empty">Приоритетные объекты не найдены</div>'}
+          ${priorities.map((project, index) => `<button class="ai-priority-card" ${projectAnalyzeAttrs(project)}><span>${index + 1}</span><div><b>${esc(project.name)}</b><small>${esc(project.city)} · ${esc(project.developer)}</small><em>${esc(project.signal)}</em></div><div class="ai-priority-meta"><strong>${project.score}/100</strong>${chip(project.level)}</div></button>`).join("") || '<div class="compact-empty">Приоритетные объекты не найдены</div>'}
         </div>
+        <section class="ai-sources">
+          <div class="ai-sources-head"><h3>Источники и ссылки</h3><span>${sources.length} проверяемых публикаций</span></div>
+          <div class="source-list">${sourceCards(sources) || '<div class="compact-empty">Источники не найдены</div>'}</div>
+        </section>
         <div class="insight-lists">
-          <div><h3>Объекты в выборке</h3>${data.projects.map((project) => `<button class="mini-result" data-analyze="${esc(project.name)}"><b>${esc(project.name)}</b><span>${esc(project.city)} · ${esc(project.developer)} · ${project.score}/100</span></button>`).join("") || '<div class="compact-empty">Объекты не найдены</div>'}</div>
+          <div><h3>Объекты в выборке</h3>${data.projects.map((project) => `<button class="mini-result" ${projectAnalyzeAttrs(project)}><b>${esc(project.name)}</b><span>${esc(project.city)} · ${esc(project.developer)} · ${project.score}/100</span></button>`).join("") || '<div class="compact-empty">Объекты не найдены</div>'}</div>
           <div><h3>Связанные новости</h3>${data.events.map((event) => `<button class="mini-result" data-ai-event="${esc(event.id)}"><b>${esc(event.title)}</b><span>${esc(event.project_name)} · ${esc(event.source)} · ${palette[event.level]?.label || "Риск"}</span></button>`).join("") || '<div class="compact-empty">Новости не найдены</div>'}</div>
         </div>
         <div class="ai-disclaimer">ИИ-анализ построен по всем новостям в ленте и не ограничивается выбранной карточкой события.</div>
@@ -353,7 +419,7 @@
       state.pendingInsightQuestion = "";
       app.innerHTML = `
         <div class="page-enter">
-          <header class="page-heading ai-page-heading"><div><span class="eyebrow">ИИ-анализ всего потока</span><h1>ИИ-анализ всех новостей</h1><p>Модель берёт в контекст всю ленту новостей, все ЖК и связанные риск-сигналы. Вопрос задаёт фокус ответа, но не сужает анализ до одной карточки.</p></div><span class="ai-status"><i></i> Модель доступна</span></header>
+          <header class="page-heading ai-page-heading"><div><span class="eyebrow">ИИ-анализ</span><h1>ИИ-анализ всех новостей</h1><p>Модель берёт в контекст всю ленту новостей, все ЖК и связанные риск-сигналы.</p></div></header>
           <div class="ai-general-layout">
             <section class="card ai-question-card">
               <div class="selected-news"><span class="selected-news-label">Контекст ИИ</span><h2>${state.projects.length} объектов · ${state.events.length} новостей</h2><p>ИИ смотрит всю ленту целиком: критические, средние и низкие сигналы, источники, города, застройщиков и связанные ЖК.</p></div>
@@ -384,9 +450,6 @@
     if (state.projectSort.startsWith("city")) {
       return sorted.sort((a, b) => direction * a.city.localeCompare(b.city, "ru") || a.name.localeCompare(b.name, "ru"));
     }
-    if (state.projectSort.startsWith("favorite")) {
-      return sorted.sort((a, b) => direction * (Number(state.favoriteIds.has(a.id)) - Number(state.favoriteIds.has(b.id))) || a.name.localeCompare(b.name, "ru"));
-    }
     if (state.projectSort.startsWith("name")) {
       return sorted.sort((a, b) => direction * a.name.localeCompare(b.name, "ru"));
     }
@@ -405,7 +468,7 @@
     if (state.projectSort.startsWith("updated")) {
       return sorted.sort((a, b) => direction * (new Date(a.updated_at) - new Date(b.updated_at)) || a.name.localeCompare(b.name, "ru"));
     }
-    return sorted.sort((a, b) => Number(state.favoriteIds.has(b.id)) - Number(state.favoriteIds.has(a.id)) || a.name.localeCompare(b.name, "ru"));
+    return sorted.sort((a, b) => levelRank(b.level) - levelRank(a.level) || b.score - a.score || a.name.localeCompare(b.name, "ru"));
   }
 
   function nextProjectSort(field) {
@@ -417,24 +480,19 @@
   }
 
   function projectTable(items) {
-    return sortProjects(items).map((p) => {
-      const favorite = state.favoriteIds.has(p.id);
-      return `<tr data-analyze="${esc(p.name)}"><td><button class="favorite-button ${favorite ? "active" : ""}" data-action="toggle-favorite" data-project-id="${esc(p.id)}" data-project-name="${esc(p.name)}" aria-label="${favorite ? "Удалить из избранного" : "Добавить в избранное"}" aria-pressed="${favorite}">${favorite ? "★" : "☆"}</button></td><td>${esc(p.name)}</td><td>${esc(p.city)}</td><td>${esc(p.developer)}</td><td>${chip(p.level)}</td><td><b>${p.score}</b>/100</td><td class="progress">${p.completion}%<div class="progress-line"><span style="width:${p.completion}%"></span></div></td><td>${shortTime(p.updated_at)}</td></tr>`;
-    }).join("");
+    return sortProjects(items).map((p) => `<tr ${projectAnalyzeAttrs(p)}><td>${esc(p.name)}</td><td>${esc(p.city)}</td><td>${esc(p.developer)}</td><td>${chip(p.level)}</td><td><b>${p.score}</b>/100</td><td class="progress">${p.completion}%<div class="progress-line"><span style="width:${p.completion}%"></span></div></td><td>${shortTime(p.updated_at)}</td></tr>`).join("");
   }
 
   async function renderProjects() {
     loading();
     try {
-      const [projects, favorites] = await Promise.all([window.api.getProjects(), window.api.getFavorites()]);
-      state.projects = projects;
-      state.favoriteIds = new Set(favorites.map((project) => project.id));
+      state.projects = await window.api.getProjects();
       app.innerHTML = `
         <div class="page-enter">
           <header class="page-heading"><div><span class="eyebrow">Проектное финансирование</span><h1>Портфель проектов</h1><p>Единый список объектов и их текущий риск-профиль.</p></div><button class="primary-btn" data-route="dashboard">Проверить новый ЖК</button></header>
           <section class="card">
-            <div class="toolbar project-toolbar"><input id="projectSearch" class="input" placeholder="Название, город или застройщик"><select id="projectLevel" class="select"><option value="ALL">Все риски</option><option value="RED">Критические</option><option value="YELLOW">Средние</option><option value="GREEN">Низкие</option></select><select id="projectSort" class="select"><option value="favorite-desc">Избранное: сначала мои</option><option value="favorite-asc">Избранное: сначала остальные</option><option value="name-asc">Объект: А-Я</option><option value="name-desc">Объект: Я-А</option><option value="city-asc">Город: А-Я</option><option value="city-desc">Город: Я-А</option><option value="developer-asc">Застройщик: А-Я</option><option value="developer-desc">Застройщик: Я-А</option><option value="risk-desc">Риск: критические сверху</option><option value="risk-asc">Риск: низкие сверху</option><option value="score-desc">Индекс: высокий сверху</option><option value="score-asc">Индекс: низкий сверху</option><option value="completion-desc">Готовность: высокая сверху</option><option value="completion-asc">Готовность: низкая сверху</option><option value="updated-desc">Обновлено: новые сверху</option><option value="updated-asc">Обновлено: старые сверху</option></select></div>
-            <div class="table-wrap"><table><thead><tr><th><button class="sort-button" data-sort-field="favorite">Избранное</button></th><th><button class="sort-button" data-sort-field="name">Объект</button></th><th><button class="sort-button" data-sort-field="city">Город</button></th><th><button class="sort-button" data-sort-field="developer">Застройщик</button></th><th><button class="sort-button" data-sort-field="risk">Риск</button></th><th><button class="sort-button" data-sort-field="score">Индекс</button></th><th><button class="sort-button" data-sort-field="completion">Готовность</button></th><th><button class="sort-button" data-sort-field="updated">Обновлено</button></th></tr></thead><tbody id="projectBody">${projectTable(state.projects)}</tbody></table></div>
+            <div class="toolbar project-toolbar"><input id="projectSearch" class="input" placeholder="Название, город или застройщик"><select id="projectLevel" class="select"><option value="ALL">Все риски</option><option value="RED">Критические</option><option value="YELLOW">Средние</option><option value="GREEN">Низкие</option></select><select id="projectSort" class="select"><option value="name-asc">Объект: А-Я</option><option value="name-desc">Объект: Я-А</option><option value="city-asc">Город: А-Я</option><option value="city-desc">Город: Я-А</option><option value="developer-asc">Застройщик: А-Я</option><option value="developer-desc">Застройщик: Я-А</option><option value="risk-desc">Риск: критические сверху</option><option value="risk-asc">Риск: низкие сверху</option><option value="score-desc">Индекс: высокий сверху</option><option value="score-asc">Индекс: низкий сверху</option><option value="completion-desc">Готовность: высокая сверху</option><option value="completion-asc">Готовность: низкая сверху</option><option value="updated-desc">Обновлено: новые сверху</option><option value="updated-asc">Обновлено: старые сверху</option></select></div>
+            <div class="table-wrap"><table><thead><tr><th><button class="sort-button" data-sort-field="name">Объект</button></th><th><button class="sort-button" data-sort-field="city">Город</button></th><th><button class="sort-button" data-sort-field="developer">Застройщик</button></th><th><button class="sort-button" data-sort-field="risk">Риск</button></th><th><button class="sort-button" data-sort-field="score">Индекс</button></th><th><button class="sort-button" data-sort-field="completion">Готовность</button></th><th><button class="sort-button" data-sort-field="updated">Обновлено</button></th></tr></thead><tbody id="projectBody">${projectTable(state.projects)}</tbody></table></div>
           </section>
         </div>`;
       const update = () => {
@@ -454,42 +512,6 @@
         update();
       }));
     } catch (error) { renderError(error); }
-  }
-
-  async function toggleFavorite(button) {
-    const projectId = button.dataset.projectId;
-    const projectName = button.dataset.projectName;
-    const favorite = state.favoriteIds.has(projectId);
-    button.disabled = true;
-    try {
-      if (favorite) {
-        await window.api.removeFavorite(projectId);
-        state.favoriteIds.delete(projectId);
-      } else {
-        await window.api.addFavorite(projectId);
-        state.favoriteIds.add(projectId);
-      }
-      state.overview = null;
-      document.querySelectorAll('[data-action="toggle-favorite"]').forEach((item) => {
-        if (item.dataset.projectId !== projectId) return;
-        const active = state.favoriteIds.has(projectId);
-        item.classList.toggle("active", active);
-        item.textContent = active ? "★" : "☆";
-        item.setAttribute("aria-pressed", String(active));
-        item.setAttribute("aria-label", active ? "Удалить из избранного" : "Добавить в избранное");
-        item.disabled = false;
-      });
-      if (currentRoute() === "projects") {
-        const q = document.getElementById("projectSearch")?.value.toLowerCase() || "";
-        const level = document.getElementById("projectLevel")?.value || "ALL";
-        const visible = state.projects.filter((project) => (level === "ALL" || project.level === level) && (!q || `${project.name} ${project.city} ${project.developer}`.toLowerCase().includes(q)));
-        document.getElementById("projectBody").innerHTML = projectTable(visible);
-      }
-      showToast(favorite ? `${projectName} удалён из избранного` : `${projectName} добавлен в избранное`);
-    } catch (error) {
-      button.disabled = false;
-      showToast(`Не удалось изменить избранное: ${error.message}`);
-    }
   }
 
   function analysisHistoryRows(items) {
@@ -614,7 +636,7 @@
             </div>
           </section>
           <div class="search-grid">
-            ${searchCards("Объекты", projectMatches, "Объекты по запросу не найдены", (project) => `<button class="search-result-row" data-analyze="${esc(project.name)}"><b>${esc(project.name)}</b><span>${esc(project.city)} · ${esc(project.developer)} · индекс ${project.score}/100</span>${chip(project.level)}</button>`)}
+            ${searchCards("Объекты", projectMatches, "Объекты по запросу не найдены", (project) => `<button class="search-result-row" ${projectAnalyzeAttrs(project)}><b>${esc(project.name)}</b><span>${esc(project.city)} · ${esc(project.developer)} · индекс ${project.score}/100</span>${chip(project.level)}</button>`)}
             ${searchCards("Новости и сигналы", eventMatches, "Новости по запросу не найдены", (event) => `<button class="search-result-row" data-ai-event="${esc(event.id)}"><b>${esc(event.title)}</b><span>${esc(event.project_name)} · ${esc(event.category)} · ${esc(event.source)}</span>${chip(event.level)}</button>`)}
             ${searchCards("История анализов аккаунта", historyMatches, "В истории этого аккаунта пока нет совпадений", (item) => `<button class="search-result-row" data-analyze="${esc(item.project_name)}"><b>${esc(item.project_name)}</b><span>${dateTime(item.analyzed_at)} · ${esc(item.summary)}</span>${chip(item.level)}</button>`)}
           </div>
@@ -634,6 +656,82 @@
     const dot = document.querySelector(".notification-button .notification-dot");
     if (counter) counter.textContent = unread ? `${unread} новых` : "Нет новых";
     if (dot) dot.style.display = unread ? "block" : "none";
+  }
+
+  async function ensureNotificationsLoaded() {
+    if (!state.events.length) state.events = await window.api.getEvents();
+    if (!state.projects.length) state.projects = await window.api.getProjects();
+    if (!state.notificationsInitialized) {
+      state.notifications = state.events.map((event, index) => ({ ...event, read: index > 2 }));
+      state.notificationsInitialized = true;
+    }
+  }
+
+  function closeNotificationOverlay() {
+    if (!notificationOverlay) return;
+    notificationOverlay.hidden = true;
+    notificationOverlay.innerHTML = "";
+    document.querySelector(".notification-button")?.classList.remove("active");
+    document.querySelector(".notification-button")?.setAttribute("aria-expanded", "false");
+  }
+
+  function overlayNotificationRows(items) {
+    return items.slice(0, 8).map((item) => `
+      <button class="overlay-notification-item ${item.read ? "" : "unread"}" data-ai-event="${esc(item.id)}">
+        <span>
+          <b>${esc(item.title)}</b>
+          <small>${esc(item.project_name)} · ${esc(item.category)} · ${shortTime(item.published_at)}</small>
+        </span>
+        ${chip(item.level)}
+      </button>`).join("");
+  }
+
+  async function openNotificationOverlay() {
+    if (!notificationOverlay) return;
+    await ensureNotificationsLoaded();
+    const visibleNotifications = scopedNotifications();
+    const unread = visibleNotifications.filter((item) => !item.read).length;
+    notificationOverlay.innerHTML = `
+      <section class="notification-popover" role="dialog" aria-label="Уведомления">
+        <header>
+          <div><span>Уведомления</span><b>${unread ? `${unread} новых` : "Всё прочитано"}</b></div>
+        </header>
+        <div class="overlay-notification-list">
+          ${overlayNotificationRows(visibleNotifications) || '<div class="compact-empty">По текущим подпискам уведомлений нет.</div>'}
+        </div>
+        <footer>
+          <button class="secondary-btn danger-btn" data-action="clear-overlay-notifications" ${visibleNotifications.length ? "" : "disabled"}>Удалить все</button>
+        </footer>
+      </section>`;
+    notificationOverlay.hidden = false;
+    document.querySelector(".notification-button")?.classList.add("active");
+    document.querySelector(".notification-button")?.setAttribute("aria-expanded", "true");
+  }
+
+  async function toggleNotificationOverlay() {
+    if (!notificationOverlay) return;
+    if (!notificationOverlay.hidden) return closeNotificationOverlay();
+    try {
+      await openNotificationOverlay();
+    } catch (error) {
+      showToast(`Не удалось открыть уведомления: ${error.message}`);
+    }
+  }
+
+  async function markOverlayNotificationsRead() {
+    const visibleIds = new Set(scopedNotifications().map((item) => item.id));
+    state.notifications = state.notifications.map((item) => visibleIds.has(item.id) ? { ...item, read: true } : item);
+    updateNotificationBadge();
+    await openNotificationOverlay();
+    showToast("Уведомления по подпискам прочитаны");
+  }
+
+  async function clearOverlayNotifications() {
+    state.notifications = [];
+    state.notificationsInitialized = true;
+    updateNotificationBadge();
+    await openNotificationOverlay();
+    showToast("Уведомления удалены");
   }
 
   function showBrowserNotification(item) {
@@ -692,9 +790,7 @@
     try {
       if (!state.events.length) state.events = await window.api.getEvents();
       if (!state.projects.length) state.projects = await window.api.getProjects();
-      if (!state.notifications.length) {
-        state.notifications = state.events.map((event, index) => ({ ...event, read: index > 2 }));
-      }
+      await ensureNotificationsLoaded();
       const visibleNotifications = scopedNotifications();
       const unread = visibleNotifications.filter((item) => !item.read).length;
       app.innerHTML = `
@@ -797,7 +893,7 @@
           <section class="card profile-summary">
             <div class="profile-avatar-large">${initials(user.name)}</div>
             <h2>${esc(user.name)}</h2><div class="profile-role">${esc(user.role)}</div><div class="profile-status">В системе</div>
-            <button class="primary-btn" data-route="notifications">Открыть уведомления</button>
+            <button class="primary-btn" data-action="toggle-notifications">Открыть уведомления</button>
             <div class="subscription-summary profile-subscription-summary"><span>Подписок: <b>${subscriptionCount}</b></span><span>Уведомлений: <b>${visibleNotifications.length}</b></span><span>Критических: <b>${criticalNotifications}</b></span></div>
           </section>
           <div>
@@ -871,12 +967,32 @@
   }
 
   document.addEventListener("click", async (event) => {
+    const notificationButton = event.target.closest(".notification-button");
+    const notificationPopover = event.target.closest(".notification-popover");
+    if (notificationOverlay && !notificationOverlay.hidden && !notificationButton && !notificationPopover) {
+      closeNotificationOverlay();
+    }
     const routeTarget = event.target.closest("[data-route]");
-    if (routeTarget) { event.preventDefault(); navigate(routeTarget.dataset.route); return; }
+    if (routeTarget) { event.preventDefault(); closeNotificationOverlay(); navigate(routeTarget.dataset.route); return; }
     const actionTarget = event.target.closest("[data-action]");
-    if (actionTarget?.dataset.action === "toggle-favorite") {
+    if (actionTarget?.dataset.action === "toggle-notifications") {
       event.preventDefault();
-      await toggleFavorite(actionTarget);
+      await toggleNotificationOverlay();
+      return;
+    }
+    if (actionTarget?.dataset.action === "close-notifications") {
+      event.preventDefault();
+      closeNotificationOverlay();
+      return;
+    }
+    if (actionTarget?.dataset.action === "mark-overlay-notifications-read") {
+      event.preventDefault();
+      await markOverlayNotificationsRead();
+      return;
+    }
+    if (actionTarget?.dataset.action === "clear-overlay-notifications") {
+      event.preventDefault();
+      await clearOverlayNotifications();
       return;
     }
     if (actionTarget?.dataset.action === "toggle-project-subscription") {
@@ -890,16 +1006,23 @@
       const eventItem = state.events.find((item) => item.id === aiTarget.dataset.aiEvent);
       state.pendingInsightQuestion = eventItem ? `Разбери сигнал по потоку: ${eventItem.title}. Проект: ${eventItem.project_name}.` : "Какие риски связаны с выбранной новостью?";
       state.streamInsight = null;
+      closeNotificationOverlay();
       if (currentRoute() === "ai-analysis") renderAIAnalysis();
       else navigate("ai-analysis");
       return;
     }
-    const analyzeTarget = event.target.closest("[data-analyze]");
+    const analyzeTarget = event.target.closest("[data-analyze], [data-analyze-name]");
     if (analyzeTarget) {
       event.preventDefault();
-      const name = analyzeTarget.dataset.analyze;
-      if (currentRoute() === "dashboard") analyze(name);
-      else { state.pendingAnalysis = name; location.hash = "dashboard"; }
+      const name = analyzeTarget.dataset.analyzeName || analyzeTarget.dataset.analyze;
+      const context = {
+        projectId: analyzeTarget.dataset.analyzeId || "",
+        city: analyzeTarget.dataset.analyzeCity || "",
+        developer: analyzeTarget.dataset.analyzeDeveloper || "",
+      };
+      closeNotificationOverlay();
+      if (currentRoute() === "dashboard") analyze(name, context);
+      else { state.pendingAnalysis = name; state.pendingProjectContext = context; location.hash = "dashboard"; }
       return;
     }
     if (actionTarget?.dataset.action === "logout") {
@@ -907,6 +1030,9 @@
     } else if (actionTarget?.dataset.action === "edit-profile") {
       showToast("Редактирование профиля будет подключено к backend");
     }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeNotificationOverlay();
   });
   globalSearch.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
