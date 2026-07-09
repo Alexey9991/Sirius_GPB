@@ -20,7 +20,7 @@
       </label>
 
       <div class="top-actions">
-        <button class="header-action notification-button" data-route="notifications" aria-label="Открыть уведомления">
+        <button class="header-action notification-button" data-action="toggle-notifications" aria-label="Открыть уведомления" aria-expanded="false">
           <span class="header-action-icon" aria-hidden="true">!</span>
           <span class="header-action-copy"><b>Уведомления</b><small id="notificationCount">3 новых</small></span>
           <span class="notification-dot"></span>
@@ -53,6 +53,7 @@
     <main id="app" class="page-container" aria-live="polite"></main>
   </div>
 
+  <div id="notificationOverlay" class="notification-overlay" hidden></div>
   <div id="toast" class="toast" role="status"></div>
   <script>/*__API_CONFIG__*/</script>
   <script>/*__API_CLIENT__*/</script>
