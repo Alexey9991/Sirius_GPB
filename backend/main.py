@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from datetime import datetime
 from functools import wraps
 
@@ -7,7 +6,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from sqlalchemy import func, or_, text
 
-from db import db_session
+import db
 from db.__all_models import Project, News
 
 
@@ -26,22 +25,18 @@ REVERSE_RISK = {
     "мониторинг": "GREEN",
 }
 
-
-
 app = Flask(__name__)
 app.config.update(API_TITLE="Risk Intelligence API", API_VERSION="1.0.0", JSON_SORT_KEYS=False)
 CORS(app, resources={r"/api/*": {"origins": "*"}, r"/health": {"origins": "*"}},
      methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type"], supports_credentials=False)
 
-DB_FILE = os.getenv("DB_FILE", os.path.join(Path(__file__).parent, "dbtest", "db.sqlite3"))
-
+# Database initialization - uses environment variables from .env.backend
 try:
-    db_session.global_init(DB_FILE)
-    print(f"✓ Database initialized at {DB_FILE}")
+    db.global_init()
+    print(f"✓ Database initialized successfully")
 except Exception as e:
     print(f"✗ Database initialization error: {e}")
     raise
-
 
 
 def json_response(payload, status=200):
@@ -59,7 +54,7 @@ def error_response(message, status=400):
 def db_session_wrapper(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        db_sess = db_session.create_session()
+        db_sess = db.create_session()
         try:
             result = f(db_sess, *args, **kwargs)
             db_sess.commit()
@@ -72,12 +67,11 @@ def db_session_wrapper(f):
     return decorated_function
 
 
-
 @app.get("/health")
 def health():
     try:
-        db_sess = db_session.create_session()
-        db_sess.execute("SELECT 1")
+        db_sess = db.create_session()
+        db_sess.execute(text("SELECT 1"))
         db_sess.close()
         return {"status": "ok", "database": "connected"}, 200
     except Exception as e:
@@ -87,7 +81,7 @@ def health():
 @app.get("/status")
 def status():
     try:
-        db_sess = db_session.create_session()
+        db_sess = db.create_session()
         projects_count = db_sess.query(Project).count()
         news_count = db_sess.query(News).count()
         critical_count = db_sess.query(Project).filter(
@@ -356,50 +350,32 @@ def overview(db_sess):
         return error_response(str(e), 500)
 
 
-@app.get("/search")
+@app.get("/search/<table>")
 @db_session_wrapper
-def search(db_sess):
+def search(db_sess, table):
     """Search across projects and news.
-    
+
     Query Parameters:
     - q: search query (required)
-    - type: search type (projects, news, all) - default: all
-    - limit: max results - default: 20
-    """
+    - stype: search by a specific type (required)
+    - limit: max results - default: 20"""
     try:
-        query_string = request.args.get("q", "").strip()
-        search_type = request.args.get("type", "all")
+        query_string = request.args.get("q")
+        stype = request.args.get("stype")
         limit = request.args.get("limit", 20, type=int)
         if not query_string:
             return error_response("Search query is required", 400)
-        if not 1 <= limit <= 100:
-            limit = 20
+        if not stype:
+            return error_response("Specific type is required", 400)
 
-        results = {
-            "query": query_string,
-            "projects": [],
-            "news": [],
-        }
-
-        if search_type in ("all", "projects"):
-            projects = db_sess.query(Project).filter(
-                or_(func.lower(Project.name).contains(query_string.lower()),
-                    func.lower(Project.city).contains(query_string.lower()),
-                    func.lower(Project.developer).contains(query_string.lower()),
-            )).limit(limit).all()
-            results["projects"] = [p.to_dict() for p in projects]
-
-        if search_type in ("all", "news"):
-            news = db_sess.query(News).filter(
-                or_(func.lower(News.title).contains(query_string.lower()),
-                    func.lower(News.content).contains(query_string.lower()),
-            )).order_by(News.date.desc()).limit(limit).all()
-            results["news"] = [n.to_dict() for n in news]
+        results = db_sess.query(db.TABLES[table]).filter(
+            func.lower(getattr(db.TABLES[table], stype)).contains(
+                query_string.lower())).limit(limit).all()
+        results = [n.to_dict() for n in results]
 
         return json_response(results), 200
     except Exception as e:
         return error_response(str(e), 400)
-
 
 
 @app.errorhandler(404)
@@ -412,10 +388,6 @@ def server_error(e):
     return error_response("Internal server error", 500)
 
 
-
 if __name__ == "__main__":
-    app.run(
-        host=os.getenv("API_HOST", "0.0.0.0"),
-        port=int(os.getenv("API_PORT", 8000)),
-        debug=os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
-    )
+    app.run(host=os.getenv("API_HOST", "0.0.0.0"),
+            port=int(os.getenv("API_PORT", 8000)))
