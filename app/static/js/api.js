@@ -27,8 +27,11 @@
     { id: "e-005", project_name: "ЖК Лесной квартал", title: "Застройщик обсуждает корректировку графика работ", summary: "Критических изменений в проектной декларации пока не опубликовано.", category: "Сроки", sentiment: "NEUTRAL", level: "YELLOW", source: "Интерфакс Недвижимость", published_at: "2026-07-03T06:10:00+05:00", source_url: "https://www.interfax.ru/realty/" },
   ];
 
-  function analysisFor(projectName) {
-    const name = projectName.toLowerCase();
+  function analysisFor(projectInput) {
+    const projectName = typeof projectInput === "object"
+      ? projectInput.project_name || projectInput.name || ""
+      : projectInput;
+    const name = String(projectName).toLowerCase();
     const red = name.includes("север") || name.includes("берег");
     const yellow = name.includes("лес") || name.includes("квартал") || name.includes("высот");
     const level = red ? "RED" : yellow ? "YELLOW" : "GREEN";
@@ -209,7 +212,10 @@
   // scattering fetch calls across the page components.
   const remote = {
     getOverview: () => request("/overview"),
-    analyze: (projectName) => request("/analysis", { method: "POST", body: JSON.stringify({ project_name: projectName }) }),
+    analyze: (projectInput) => request("/analysis", {
+      method: "POST",
+      body: JSON.stringify(typeof projectInput === "object" ? projectInput : { project_name: projectInput }),
+    }),
     getAlerts: (level = "ALL") => request(`/alerts?level=${encodeURIComponent(level)}&limit=100`),
     getProjects: (query = "", level = "ALL") => request(`/projects?query=${encodeURIComponent(query)}&level=${encodeURIComponent(level)}`),
     getEvents: () => request("/events?limit=100"),
