@@ -1,4 +1,13 @@
 # dbtest/
 .env
-catboost_info/
+.env.app
+.env.backend
 __pycache__/
+*.py[cod]
+.venv/
+.streamlit/secrets.toml
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+catboost_info/
+.vscode/
