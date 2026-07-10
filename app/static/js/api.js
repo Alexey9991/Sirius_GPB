@@ -103,7 +103,7 @@
 
   async function request(url, options = {}) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), options.timeoutMs || 3000);
+    const timer = setTimeout(() => controller.abort(), options.timeoutMs || 10000);
     try {
       const headers = { ...(options.headers || {}) };
       if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
