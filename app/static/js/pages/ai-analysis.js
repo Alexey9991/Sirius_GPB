@@ -141,7 +141,7 @@ async function askStreamInsight(question) {
     const button = document.getElementById("askAiButton");
     if (button) { button.disabled = true; button.textContent = "ИИ анализирует новости…"; }
     try {
-      await new Promise((resolve) => setTimeout(resolve, 220));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       state.streamInsight = buildStreamInsight(question);
       document.getElementById("aiImpactResult").innerHTML = streamInsightResult(state.streamInsight);
     } finally {
