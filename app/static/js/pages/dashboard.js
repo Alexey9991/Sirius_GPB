@@ -7,21 +7,6 @@
     levelRank, projectByName, projectAnalyzeAttrs, renderRoute,
   } = ctx;
 
-function riskIndexSummary(data) {
-    const drivers = [...(data?.drivers || [])].sort((a, b) => Number(b.value) - Number(a.value));
-    const main = drivers[0];
-    const second = drivers[1];
-    const levelText = data.level === "RED"
-      ? "Индекс высокий: объект требует ручной проверки и контроля свежих публикаций."
-      : data.level === "YELLOW"
-        ? "Индекс средний: критических сигналов нет, но объект лучше оставить в наблюдении."
-        : "Индекс низкий: существенных негативных сигналов в текущем потоке не видно.";
-    const driverText = main
-      ? `Главный фактор: ${main.name.toLowerCase()} (${Number(main.value)}%).${second ? ` Дополнительно влияет ${second.name.toLowerCase()} (${Number(second.value)}%).` : ""}`
-      : "Факторы риска не выделены.";
-    return componentHtml("risk-summary", { TEXT: `${esc(levelText)} ${esc(driverText)}` });
-  }
-
 function projectRows(items) {
     return items.map((p) => componentHtml("object-row", {
       ANALYZE_ATTRS: projectAnalyzeAttrs(p),
@@ -87,7 +72,6 @@ function analysisPanel(data) {
       SUMMARY: esc(data.summary),
       RING_COLOR: p.color,
       SCORE: Number(data.score),
-      RISK_SUMMARY: riskIndexSummary(data),
       EVENTS: events,
     });
   }
