@@ -1,0 +1,45 @@
+<template id="template-news">
+  <div class="page-enter">
+    <header class="page-heading">
+      <div>
+        <span class="eyebrow">Единый информационный поток</span>
+        <h1>Лента новостей</h1>
+        <p>Новости, жалобы и риск-сигналы по объектам в одном рабочем пространстве.</p>
+      </div>
+      <button class="secondary-btn" id="refreshFeed">Обновить ленту</button>
+    </header>
+    <div class="stat-grid three-columns">
+      <div class="stat"><small>Публикаций в ленте</small><strong>[[EVENTS_COUNT]]</strong><span class="delta">из подключённых источников</span></div>
+      <div class="stat risk-stat"><small>Критические риски</small><strong>[[CRITICAL_COUNT]]</strong><span class="delta negative">требуют проверки</span></div>
+      <div class="stat"><small>Средние риски</small><strong>[[MEDIUM_COUNT]]</strong><span class="delta">на наблюдении</span></div>
+    </div>
+    <div class="news-layout">
+      <section class="card">
+        <div class="card-head">
+          <div><h2>Все события</h2><span class="object-meta">Новости отсортированы по времени публикации</span></div>
+          <span class="online">● LIVE</span>
+        </div>
+        <div class="toolbar">
+          <input id="newsSearch" class="input" placeholder="Поиск по новости или проекту">
+          <select id="newsLevel" class="select">
+            <option value="ALL">Все уровни</option>
+            <option value="RED">Критические</option>
+            <option value="YELLOW">Средние</option>
+            <option value="GREEN">Низкие</option>
+          </select>
+        </div>
+        <div id="feed" class="data-list">[[FEED_ROWS]]</div>
+      </section>
+      <aside class="news-sidebar">
+        <section class="card risk-digest">
+          <div class="card-head"><div><span class="eyebrow">Требуют внимания</span><h2>Риски</h2></div><span class="chip red">[[ALERTS_COUNT]]</span></div>
+          <div id="riskDigest" class="data-list">[[ALERT_ROWS]]</div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>Источники</h2></div>
+          <div class="source-list">[[SOURCE_ROWS]]</div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</template>
