@@ -10,6 +10,7 @@
  */
 (function () {
   const config = window.APP_CONFIG || {};
+  const DEFAULT_LIMIT = 30;
   const storageKeys = {
     analysisHistory: "analysis-history",
     riskChanges: "risk-changes",
@@ -21,6 +22,13 @@
     signals: null,
     events: null,
     normalizedProjects: null,
+    normalizedProjectsWithEvents: null,
+    projectsRequest: null,
+    newsRequest: null,
+    signalsRequest: null,
+    eventsRequest: null,
+    normalizedProjectsRequest: null,
+    normalizedProjectsWithEventsRequest: null,
   };
 
   function apiBaseUrl() {
@@ -95,13 +103,19 @@
 
   async function request(url, options = {}) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), options.timeoutMs || 9000);
+    const timer = setTimeout(() => controller.abort(), options.timeoutMs || 3000);
     try {
-      const response = await fetch(url, {
+      const headers = { ...(options.headers || {}) };
+      if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+      const fetchOptions = {
         ...options,
         signal: controller.signal,
-        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-      });
+      };
+      delete fetchOptions.timeoutMs;
+      delete fetchOptions.headers;
+      if (Object.keys(headers).length) fetchOptions.headers = headers;
+
+      const response = await fetch(url, fetchOptions);
       if (!response.ok) {
         const detail = await response.text();
         throw new Error(`API ${response.status}: ${detail || response.statusText}`);
@@ -118,44 +132,48 @@
     }
   }
 
-  async function getTable(table, limit = 1000) {
+  async function getTable(table, limit = DEFAULT_LIMIT) {
     const rows = await request(tableUrl(table, { limit }));
     return Array.isArray(rows) ? rows : [];
   }
 
-  async function searchTable(table, stype, query, limit = 20) {
+  async function searchTable(table, stype, query, limit = DEFAULT_LIMIT) {
     const rows = await request(searchUrl(table, { stype, q: query, limit }));
     return Array.isArray(rows) ? rows : [];
   }
 
-  async function backendBundle() {
-    if (cache.projects && cache.news && cache.signals) return cache;
-
-    const results = await Promise.allSettled([
-      getTable("projects", 2000),
-      getTable("news", 2000),
-      getTable("impact_signals", 4000),
-    ]);
-    const fulfilled = results.filter((result) => result.status === "fulfilled");
-    if (!fulfilled.length) {
-      const reason = results.find((result) => result.status === "rejected")?.reason;
-      throw new Error(`Не удалось получить данные из backend API: ${reason?.message || "нет ответа"}`);
+  async function backendProjects() {
+    if (!cache.projects) {
+      cache.projectsRequest ||= getTable("projects").finally(() => { cache.projectsRequest = null; });
+      cache.projects = await cache.projectsRequest;
+      cache.normalizedProjects = null;
+      cache.normalizedProjectsWithEvents = null;
     }
+    return cache.projects;
+  }
 
-    cache.projects = results[0].status === "fulfilled" ? results[0].value : [];
-    cache.news = results[1].status === "fulfilled" ? results[1].value : [];
-    cache.signals = results[2].status === "fulfilled" ? results[2].value : [];
-    cache.events = null;
-    cache.normalizedProjects = null;
-    return cache;
+  async function backendNews() {
+    if (!cache.news) {
+      cache.newsRequest ||= getTable("news").finally(() => { cache.newsRequest = null; });
+      cache.news = await cache.newsRequest;
+      cache.events = null;
+      cache.normalizedProjectsWithEvents = null;
+    }
+    return cache.news;
+  }
+
+  async function backendSignals() {
+    if (!cache.signals) {
+      cache.signalsRequest ||= getTable("impact_signals").finally(() => { cache.signalsRequest = null; });
+      cache.signals = await cache.signalsRequest;
+      cache.events = null;
+      cache.normalizedProjectsWithEvents = null;
+    }
+    return cache.signals;
   }
 
   function relationName(row, relationKey, fallbackKey) {
     return normalizeText(row?.[relationKey]?.name || row?.[fallbackKey] || "");
-  }
-
-  function signalKey(signal) {
-    return signal?.project_id || signal?.project?.id || "";
   }
 
   function projectEventMatch(event, project) {
@@ -221,16 +239,36 @@
   }
 
   async function normalizedEvents() {
-    await backendBundle();
     if (cache.events) return cache.events;
+    if (cache.eventsRequest) return cache.eventsRequest;
 
-    const signalEvents = cache.signals.map(normalizeSignal);
-    const signalNewsIds = new Set(signalEvents.map((event) => event.news_id).filter(Boolean));
-    const standaloneNews = cache.news
-      .filter((news) => !signalNewsIds.has(news.id))
-      .map(normalizeNews);
-    cache.events = sortByDateDesc([...signalEvents, ...standaloneNews]);
-    return cache.events;
+    cache.eventsRequest = Promise.all([backendSignals(), backendNews()])
+      .then(([signals, news]) => {
+        const signalEvents = signals.map(normalizeSignal);
+        const signalNewsIds = new Set(signalEvents.map((event) => event.news_id).filter(Boolean));
+        const standaloneNews = news
+          .filter((news) => !signalNewsIds.has(news.id))
+          .map(normalizeNews);
+        cache.events = sortByDateDesc([...signalEvents, ...standaloneNews]);
+        return cache.events;
+      })
+      .finally(() => { cache.eventsRequest = null; });
+    return cache.eventsRequest;
+  }
+
+  function projectEmbeddedSignals(project) {
+    const signals = Array.isArray(project.impact_signals) ? project.impact_signals : [];
+    return signals.map((signal) => {
+      const score = riskScore(signal.risk_level);
+      return {
+        score,
+        level: riskLevelFromScore(score),
+        category: normalizeText(signal.risk_category, "Импакт-сигнал"),
+        project_id: normalizeText(signal.project_id || project.id),
+        project_name: normalizeText(project.name),
+        published_at: normalizeDate(signal.created_at || project.created_at),
+      };
+    });
   }
 
   function estimateCompletion(project) {
@@ -253,8 +291,10 @@
     return new Date(Math.max(...dates, Date.now())).toISOString();
   }
 
-  function normalizeProject(project, events) {
-    const related = events.filter((event) => projectEventMatch(event, project));
+  function normalizeProject(project, events = null) {
+    const related = events
+      ? events.filter((event) => projectEventMatch(event, project))
+      : projectEmbeddedSignals(project);
     const score = related.length ? Math.max(...related.map((event) => event.score || 0)) : 0;
     return {
       id: normalizeText(project.id),
@@ -271,27 +311,45 @@
     };
   }
 
-  async function normalizedProjects() {
-    await backendBundle();
-    if (cache.normalizedProjects) return cache.normalizedProjects;
+  async function normalizedProjects(options = {}) {
+    const projects = await backendProjects();
+    const events = options.events || null;
+    const withEvents = Array.isArray(events);
 
-    const events = await normalizedEvents();
-    const byId = new Map();
-    cache.projects.forEach((project) => byId.set(project.id, normalizeProject(project, events)));
+    if (!withEvents && cache.normalizedProjects) return cache.normalizedProjects;
+    if (withEvents && cache.normalizedProjectsWithEvents) return cache.normalizedProjectsWithEvents;
+    if (!withEvents && cache.normalizedProjectsRequest) return cache.normalizedProjectsRequest;
+    if (withEvents && cache.normalizedProjectsWithEventsRequest) return cache.normalizedProjectsWithEventsRequest;
 
-    events.forEach((event) => {
-      if (!event.project_id || byId.has(event.project_id) || event.project_name === "Не привязано к ЖК") return;
-      byId.set(event.project_id, normalizeProject({
-        id: event.project_id,
-        name: event.project_name,
-        city: { name: event.city },
-        developer: { name: event.developer },
-        created_at: event.published_at,
-      }, events));
+    const build = Promise.resolve().then(() => {
+      const byId = new Map();
+      projects.forEach((project) => byId.set(project.id, normalizeProject(project, events)));
+
+      if (withEvents) {
+        events.forEach((event) => {
+          if (!event.project_id || byId.has(event.project_id) || event.project_name === "Не привязано к ЖК") return;
+          byId.set(event.project_id, normalizeProject({
+            id: event.project_id,
+            name: event.project_name,
+            city: { name: event.city },
+            developer: { name: event.developer },
+            created_at: event.published_at,
+          }, events));
+        });
+      }
+
+      const normalized = [...byId.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "ru"));
+      if (withEvents) cache.normalizedProjectsWithEvents = normalized;
+      else cache.normalizedProjects = normalized;
+      return normalized;
+    }).finally(() => {
+      if (withEvents) cache.normalizedProjectsWithEventsRequest = null;
+      else cache.normalizedProjectsRequest = null;
     });
 
-    cache.normalizedProjects = [...byId.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "ru"));
-    return cache.normalizedProjects;
+    if (withEvents) cache.normalizedProjectsWithEventsRequest = build;
+    else cache.normalizedProjectsRequest = build;
+    return build;
   }
 
   function findProject(projectInput, projects) {
@@ -373,7 +431,8 @@
   }
 
   async function analyzeProject(projectInput) {
-    const [projects, events] = await Promise.all([normalizedProjects(), normalizedEvents()]);
+    const events = await normalizedEvents();
+    const projects = await normalizedProjects({ events });
     const project = findProject(projectInput, projects);
     const projectEvents = events.filter((event) => projectEventMatch(event, project));
     const score = projectEvents.length ? Math.max(...projectEvents.map((event) => event.score || 0)) : project.score || 0;
@@ -423,7 +482,8 @@
   }
 
   async function getOverview() {
-    const [projects, events] = await Promise.all([normalizedProjects(), normalizedEvents()]);
+    const projects = await normalizedProjects();
+    const events = await normalizedEvents();
     return {
       stats: {
         projects_total: projects.length,
@@ -508,6 +568,6 @@
     getRiskChanges,
     login,
     register,
-    searchProjectsByName: (query, limit = 20) => searchTable("projects", "name", query, limit),
+    searchProjectsByName: (query, limit = DEFAULT_LIMIT) => searchTable("projects", "name", query, limit),
   };
 })();
