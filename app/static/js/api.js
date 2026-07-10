@@ -1,108 +1,32 @@
 /**
- * Единственная граница между интерфейсом и backend.
- * Компоненты страниц не знают URL эндпоинтов и не содержат мок-логику.
+ * Frontend API adapter for the current backend.
+ *
+ * The backend exposes generic table endpoints:
+ *   GET /api/get/<table>
+ *   GET /api/search/<table>?stype=<field>&q=<query>
+ *
+ * Page components still consume a richer UI contract, so this file maps real
+ * backend rows into projects, events, alerts and object analysis objects.
  */
 (function () {
   const config = window.APP_CONFIG || {};
-
-  // FRONTEND/BACKEND SWITCH
-  // config.useMock=true  -> functions in `mocks` below are used, no API needed.
-  // config.useMock=false -> functions in `remote` call the real backend.
-  // main.py builds this config from USE_MOCK_API and API_BASE_URL.
-  // Backend developers normally should not edit page rendering in app.js.
-
-  const projects = [
-    { id: "p-001", name: "ЖК Северный берег", city: "Москва", developer: "ГК Север Девелопмент", score: 86, level: "RED", completion: 62, updated_at: "2026-07-03T08:42:00+05:00" },
-    { id: "p-002", name: "ЖК Лесной квартал", city: "Санкт-Петербург", developer: "СтройИнвест", score: 57, level: "YELLOW", completion: 78, updated_at: "2026-07-03T08:31:00+05:00" },
-    { id: "p-003", name: "ЖК Солнечный парк", city: "Казань", developer: "Городские проекты", score: 18, level: "GREEN", completion: 91, updated_at: "2026-07-03T07:55:00+05:00" },
-    { id: "p-004", name: "ЖК Речной порт", city: "Нижний Новгород", developer: "Домстрой", score: 31, level: "GREEN", completion: 49, updated_at: "2026-07-03T07:37:00+05:00" },
-    { id: "p-005", name: "ЖК Новые высоты", city: "Екатеринбург", developer: "Урал Девелопмент", score: 68, level: "YELLOW", completion: 35, updated_at: "2026-07-03T06:48:00+05:00" },
-  ];
-
-  const events = [
-    { id: "e-001", project_name: "ЖК Северный берег", title: "Прокуратура начала проверку застройщика", summary: "Ведомство проверяет соблюдение сроков и использование средств дольщиков.", category: "Юридический риск", sentiment: "NEGATIVE", level: "RED", source: "Коммерсантъ Недвижимость", published_at: "2026-07-03T08:42:00+05:00", source_url: "https://www.kommersant.ru/realty" },
-    { id: "e-002", project_name: "ЖК Речной порт", title: "Покупатели сообщают о замедлении строительных работ", summary: "В открытых источниках растёт число сообщений о снижении активности на площадке.", category: "Сроки", sentiment: "NEGATIVE", level: "YELLOW", source: "РБК Недвижимость", published_at: "2026-07-03T08:15:00+05:00", source_url: "https://realty.rbc.ru/" },
-    { id: "e-003", project_name: "ЖК Новые высоты", title: "Срок сдачи корпуса перенесён на шесть месяцев", summary: "Застройщик обновил проектную декларацию и новый график ввода.", category: "Сроки", sentiment: "NEGATIVE", level: "RED", source: "ЕИСЖС / наш.дом.рф", published_at: "2026-07-03T07:20:00+05:00", source_url: "https://наш.дом.рф/" },
-    { id: "e-004", project_name: "ЖК Солнечный парк", title: "Строительная готовность нового корпуса достигла 91%", summary: "Работы идут по графику, разрешительная документация актуальна.", category: "Строительство", sentiment: "POSITIVE", level: "GREEN", source: "ЕРЗ.РФ", published_at: "2026-07-03T06:50:00+05:00", source_url: "https://erzrf.ru/" },
-    { id: "e-005", project_name: "ЖК Лесной квартал", title: "Застройщик обсуждает корректировку графика работ", summary: "Критических изменений в проектной декларации пока не опубликовано.", category: "Сроки", sentiment: "NEUTRAL", level: "YELLOW", source: "Интерфакс Недвижимость", published_at: "2026-07-03T06:10:00+05:00", source_url: "https://www.interfax.ru/realty/" },
-  ];
-
-  function analysisFor(projectInput) {
-    const projectName = typeof projectInput === "object"
-      ? projectInput.project_name || projectInput.name || ""
-      : projectInput;
-    const name = String(projectName).toLowerCase();
-    const red = name.includes("север") || name.includes("берег");
-    const yellow = name.includes("лес") || name.includes("квартал") || name.includes("высот");
-    const level = red ? "RED" : yellow ? "YELLOW" : "GREEN";
-    const score = red ? 86 : yellow ? 57 : 18;
-    const summaries = {
-      RED: "Обнаружена связка негативных сигналов: перенос срока сдачи, проверка надзорных органов и жалобы покупателей. Требуется проверка влияния на график строительства и cash flow проекта.",
-      YELLOW: "Зафиксированы умеренные сигналы риска: обсуждение сроков и отдельные жалобы покупателей. Критических юридических событий не найдено.",
-      GREEN: "Существенных негативных сигналов не найдено. Новостной фон нейтральный или положительный, критических событий по объекту нет.",
-    };
-    const values = level === "RED" ? [91, 88, 74, 63] : level === "YELLOW" ? [55, 22, 48, 35] : [18, 10, 16, 22];
-    const labels = ["Срыв сроков", "Юридический риск", "Репутация", "Финансовый риск"];
-    const notes = level === "RED"
-      ? ["перенос сдачи корпуса", "проверка прокуратуры", "рост жалоб покупателей", "давление на продажи"]
-      : level === "YELLOW"
-        ? ["есть обсуждение сроков", "проверок не найдено", "единичные жалобы", "прямых сигналов нет"]
-        : ["работы идут по графику", "проверок нет", "фон нейтральный", "прямых сигналов нет"];
-    const related = events.filter((item) => item.project_name.toLowerCase().includes(name.replace("жк ", "")));
-    return {
-      project_id: projects.find((p) => p.name.toLowerCase() === name)?.id || null,
-      project_name: projectName,
-      level,
-      score,
-      summary: summaries[level],
-      drivers: labels.map((label, index) => ({ name: label, value: values[index], text: notes[index] })),
-      events: related.length ? related : events.slice(level === "GREEN" ? 3 : 0, level === "GREEN" ? 5 : 3),
-      model_version: "risk-model-demo-1",
-      analyzed_at: new Date().toISOString(),
-    };
-  }
-
-  function impactFor(eventId, question) {
-    const event = events.find((item) => item.id === eventId) || events[0];
-    const profiles = {
-      RED: {
-        verdict: "Существенно повышает риск проекта",
-        detailed_analysis: "Новость содержит прямой негативный сигнал, который может повлиять на сроки, юридическую устойчивость и денежный поток проекта. Необходимо проверить первоисточник и сопоставить событие с графиком финансирования.",
-        risk_delta: 18,
-        confidence: 92,
-        factors: ["Высокая значимость источника", "Прямое упоминание проекта", "Негативный юридический или операционный сигнал"],
-        recommendations: ["Запросить подтверждающие документы", "Проверить график финансирования", "Назначить ответственного аналитика"],
-      },
-      YELLOW: {
-        verdict: "Умеренно повышает риск проекта",
-        detailed_analysis: "Событие формирует ранний предупреждающий сигнал, но пока не подтверждает критическое ухудшение. Итоговое влияние зависит от повторяемости публикаций и официальной реакции застройщика.",
-        risk_delta: 7,
-        confidence: 81,
-        factors: ["Косвенное влияние на сроки", "Требуется подтверждение", "Умеренный новостной фон"],
-        recommendations: ["Продолжить мониторинг", "Проверить официальные раскрытия", "Сравнить с предыдущими событиями"],
-      },
-      GREEN: {
-        verdict: "Не повышает текущий риск",
-        detailed_analysis: "Новость подтверждает нормальный ход проекта и не содержит значимых негативных сигналов. Она снижает неопределённость, но не отменяет регулярный мониторинг.",
-        risk_delta: -3,
-        confidence: 87,
-        factors: ["Положительная динамика строительства", "Нет юридических претензий", "Нейтральный или позитивный фон"],
-        recommendations: ["Сохранить плановый мониторинг", "Проверить следующий отчёт о готовности"],
-      },
-    };
-    return {
-      event_id: event.id,
-      project_name: event.project_name,
-      question,
-      ...profiles[event.level],
-      generated_at: new Date().toISOString(),
-    };
-  }
-
   const storageKeys = {
     analysisHistory: "analysis-history",
     riskChanges: "risk-changes",
+    users: "users",
   };
+  const cache = {
+    projects: null,
+    news: null,
+    signals: null,
+    events: null,
+    normalizedProjects: null,
+  };
+
+  function apiBaseUrl() {
+    const raw = String(config.baseUrl || "http://localhost:8000").replace(/\/+$/, "");
+    return raw.endsWith("/api") ? raw : `${raw}/api`;
+  }
 
   function activeUserId() {
     return localStorage.getItem("risk-intelligence:active-user-id") || "u-001";
@@ -125,7 +49,299 @@
     localStorage.setItem(key, JSON.stringify(value));
   }
 
-  function recordMockAnalysis(analysis) {
+  function clamp(value, min = 0, max = 100) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return min;
+    return Math.max(min, Math.min(max, number));
+  }
+
+  function normalizeText(value, fallback = "") {
+    return String(value ?? fallback).trim();
+  }
+
+  function compactText(value, max = 190) {
+    const text = normalizeText(value).replace(/\s+/g, " ");
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  }
+
+  function normalizeDate(value) {
+    if (!value) return new Date().toISOString();
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  }
+
+  function riskScore(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return 0;
+    if (number <= 3) return { 1: 24, 2: 57, 3: 86 }[Math.round(number)] || 0;
+    return clamp(number);
+  }
+
+  function riskLevelFromScore(score) {
+    if (score >= 70) return "RED";
+    if (score >= 35) return "YELLOW";
+    return "GREEN";
+  }
+
+  function tableUrl(table, params = {}) {
+    const query = new URLSearchParams(params);
+    return `${apiBaseUrl()}/get/${encodeURIComponent(table)}${query.size ? `?${query}` : ""}`;
+  }
+
+  function searchUrl(table, params = {}) {
+    const query = new URLSearchParams(params);
+    return `${apiBaseUrl()}/search/${encodeURIComponent(table)}?${query}`;
+  }
+
+  async function request(url, options = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), options.timeoutMs || 9000);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`API ${response.status}: ${detail || response.statusText}`);
+      }
+      if (response.status === 204) return null;
+      return response.json();
+    } catch (error) {
+      if (error.name === "AbortError") {
+        throw new Error(`Бэкенд не ответил за отведённое время: ${url}`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function getTable(table, limit = 1000) {
+    const rows = await request(tableUrl(table, { limit }));
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  async function searchTable(table, stype, query, limit = 20) {
+    const rows = await request(searchUrl(table, { stype, q: query, limit }));
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  async function backendBundle() {
+    if (cache.projects && cache.news && cache.signals) return cache;
+
+    const results = await Promise.allSettled([
+      getTable("projects", 2000),
+      getTable("news", 2000),
+      getTable("impact_signals", 4000),
+    ]);
+    const fulfilled = results.filter((result) => result.status === "fulfilled");
+    if (!fulfilled.length) {
+      const reason = results.find((result) => result.status === "rejected")?.reason;
+      throw new Error(`Не удалось получить данные из backend API: ${reason?.message || "нет ответа"}`);
+    }
+
+    cache.projects = results[0].status === "fulfilled" ? results[0].value : [];
+    cache.news = results[1].status === "fulfilled" ? results[1].value : [];
+    cache.signals = results[2].status === "fulfilled" ? results[2].value : [];
+    cache.events = null;
+    cache.normalizedProjects = null;
+    return cache;
+  }
+
+  function relationName(row, relationKey, fallbackKey) {
+    return normalizeText(row?.[relationKey]?.name || row?.[fallbackKey] || "");
+  }
+
+  function signalKey(signal) {
+    return signal?.project_id || signal?.project?.id || "";
+  }
+
+  function projectEventMatch(event, project) {
+    if (!event || !project) return false;
+    if (event.project_id && project.id && event.project_id === project.id) return true;
+    return normalizeText(event.project_name).toLowerCase() === normalizeText(project.name).toLowerCase();
+  }
+
+  function normalizeSignal(signal) {
+    const news = signal.news || {};
+    const project = signal.project || {};
+    const city = signal.city || project.city || {};
+    const developer = signal.developer || project.developer || {};
+    const score = riskScore(signal.risk_level);
+    const level = riskLevelFromScore(score);
+    const title = normalizeText(news.title || signal.risk_category, "Сигнал риска");
+    const sourceUrl = normalizeText(news.parse_news?.url || news.url || "#");
+    return {
+      id: normalizeText(signal.id || news.id || `${signal.project_id}-${signal.created_at}`),
+      news_id: normalizeText(news.id || signal.news_id || ""),
+      project_id: normalizeText(signal.project_id || project.id || ""),
+      project_name: normalizeText(project.name || signal.project_name, "Объект не указан"),
+      city: normalizeText(city.name || signal.city_name),
+      developer: normalizeText(developer.name || signal.developer_name),
+      title,
+      summary: compactText(news.content || title),
+      category: normalizeText(signal.risk_category || news.category, "Импакт-сигнал"),
+      sentiment: level === "GREEN" ? "NEUTRAL" : "NEGATIVE",
+      level,
+      score,
+      source: normalizeText(news.source, "Backend API"),
+      published_at: normalizeDate(news.date || news.created_at || signal.created_at),
+      source_url: sourceUrl,
+      raw: signal,
+    };
+  }
+
+  function normalizeNews(news) {
+    const signal = Array.isArray(news.impact_signal) ? news.impact_signal[0] : news.impact_signal;
+    if (signal) return normalizeSignal({ ...signal, news });
+    return {
+      id: normalizeText(news.id || news.url || news.created_at),
+      news_id: normalizeText(news.id || ""),
+      project_id: "",
+      project_name: "Не привязано к ЖК",
+      city: "",
+      developer: "",
+      title: normalizeText(news.title, "Новость без заголовка"),
+      summary: compactText(news.content || news.category || "Новость из backend API"),
+      category: normalizeText(news.category, "Новость"),
+      sentiment: "NEUTRAL",
+      level: "GREEN",
+      score: 0,
+      source: normalizeText(news.source, "Backend API"),
+      published_at: normalizeDate(news.date || news.created_at),
+      source_url: normalizeText(news.parse_news?.url || news.url || "#"),
+      raw: news,
+    };
+  }
+
+  function sortByDateDesc(items) {
+    return [...items].sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+  }
+
+  async function normalizedEvents() {
+    await backendBundle();
+    if (cache.events) return cache.events;
+
+    const signalEvents = cache.signals.map(normalizeSignal);
+    const signalNewsIds = new Set(signalEvents.map((event) => event.news_id).filter(Boolean));
+    const standaloneNews = cache.news
+      .filter((news) => !signalNewsIds.has(news.id))
+      .map(normalizeNews);
+    cache.events = sortByDateDesc([...signalEvents, ...standaloneNews]);
+    return cache.events;
+  }
+
+  function estimateCompletion(project) {
+    if (project.completion !== undefined) return clamp(project.completion);
+    const planned = project.planned_rve_date ? new Date(project.planned_rve_date) : null;
+    const created = project.created_at ? new Date(project.created_at) : null;
+    if (!planned || Number.isNaN(planned.getTime())) return 0;
+    if (planned <= new Date()) return 100;
+    const start = created && !Number.isNaN(created.getTime())
+      ? created
+      : new Date(planned.getFullYear() - 2, planned.getMonth(), planned.getDate());
+    const total = planned - start;
+    const elapsed = Date.now() - start.getTime();
+    return total > 0 ? clamp(Math.round((elapsed / total) * 100)) : 0;
+  }
+
+  function latestProjectDate(project, events) {
+    const dates = events.map((event) => new Date(event.published_at).getTime()).filter(Number.isFinite);
+    if (project.created_at) dates.push(new Date(project.created_at).getTime());
+    return new Date(Math.max(...dates, Date.now())).toISOString();
+  }
+
+  function normalizeProject(project, events) {
+    const related = events.filter((event) => projectEventMatch(event, project));
+    const score = related.length ? Math.max(...related.map((event) => event.score || 0)) : 0;
+    return {
+      id: normalizeText(project.id),
+      name: normalizeText(project.name, "Объект без названия"),
+      city: relationName(project, "city", "city_name") || "Не указан",
+      developer: relationName(project, "developer", "developer_name") || "Не указан",
+      score,
+      level: riskLevelFromScore(score),
+      completion: estimateCompletion(project),
+      updated_at: latestProjectDate(project, related),
+      planned_rve_date: project.planned_rve_date || null,
+      signals_count: related.length,
+      raw: project,
+    };
+  }
+
+  async function normalizedProjects() {
+    await backendBundle();
+    if (cache.normalizedProjects) return cache.normalizedProjects;
+
+    const events = await normalizedEvents();
+    const byId = new Map();
+    cache.projects.forEach((project) => byId.set(project.id, normalizeProject(project, events)));
+
+    events.forEach((event) => {
+      if (!event.project_id || byId.has(event.project_id) || event.project_name === "Не привязано к ЖК") return;
+      byId.set(event.project_id, normalizeProject({
+        id: event.project_id,
+        name: event.project_name,
+        city: { name: event.city },
+        developer: { name: event.developer },
+        created_at: event.published_at,
+      }, events));
+    });
+
+    cache.normalizedProjects = [...byId.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "ru"));
+    return cache.normalizedProjects;
+  }
+
+  function findProject(projectInput, projects) {
+    const name = typeof projectInput === "object"
+      ? normalizeText(projectInput.project_name || projectInput.name)
+      : normalizeText(projectInput);
+    const id = typeof projectInput === "object" ? normalizeText(projectInput.project_id) : "";
+    return projects.find((project) => id && project.id === id)
+      || projects.find((project) => project.name.toLowerCase() === name.toLowerCase())
+      || projects.find((project) => project.name.toLowerCase().includes(name.toLowerCase()))
+      || {
+        id,
+        name,
+        city: normalizeText(projectInput?.city, "Не указан"),
+        developer: normalizeText(projectInput?.developer, "Не указан"),
+        score: 0,
+        level: "GREEN",
+        completion: 0,
+        updated_at: new Date().toISOString(),
+      };
+  }
+
+  function driverRows(events) {
+    const byCategory = events.reduce((acc, event) => {
+      const key = event.category || "Импакт-сигнал";
+      acc[key] = acc[key] || { name: key, value: 0, text: event.summary, count: 0 };
+      acc[key].count += 1;
+      acc[key].value = Math.max(acc[key].value, event.score || 0);
+      if ((event.score || 0) >= acc[key].value) acc[key].text = event.summary;
+      return acc;
+    }, {});
+    return Object.values(byCategory).sort((a, b) => b.value - a.value).slice(0, 4);
+  }
+
+  function analysisSummary(project, events, level) {
+    const critical = events.filter((event) => event.level === "RED");
+    const medium = events.filter((event) => event.level === "YELLOW");
+    if (!events.length) {
+      return `В backend по объекту ${project.name} не найдено связанных impact-сигналов. Объект можно оставить в плановом мониторинге до появления новых публикаций.`;
+    }
+    if (level === "RED") {
+      return `По объекту ${project.name} найдено ${critical.length} критических сигналов и ${events.length} связанных публикаций. Требуется проверка первоисточников и графика проекта.`;
+    }
+    if (level === "YELLOW") {
+      return `По объекту ${project.name} есть умеренные сигналы: ${medium.length} публикаций требуют наблюдения, критический уровень пока не подтверждён.`;
+    }
+    return `По объекту ${project.name} критических сигналов не найдено. В ленте есть ${events.length} связанных публикаций без высокого риска.`;
+  }
+
+  function recordAnalysis(analysis) {
     const history = readLocal(accountKey(storageKeys.analysisHistory), []);
     const previous = history.find((item) => item.project_name === analysis.project_name);
     const entry = {
@@ -156,75 +372,142 @@
     }
   }
 
-  const mocks = {
-    async getOverview() {
-      return { stats: { projects_total: 42, critical_projects: 5, events_today: 1847, sources_online: 126 }, recent_events: events.slice(0, 4) };
-    },
-    async analyze(projectName) {
-      await delay(280);
-      const analysis = analysisFor(projectName);
-      recordMockAnalysis(analysis);
-      return analysis;
-    },
-    async getAlerts(level = "ALL") { return events.filter((e) => e.level !== "GREEN" && (level === "ALL" || e.level === level)); },
-    async getProjects(query = "", level = "ALL") {
-      const q = query.toLowerCase();
-      return projects.filter((p) => (!q || `${p.name} ${p.city} ${p.developer}`.toLowerCase().includes(q)) && (level === "ALL" || p.level === level));
-    },
-    async getEvents() { return events; },
-    async explainImpact(eventId, question) { await delay(420); return impactFor(eventId, question); },
-    async getAnalysisHistory() { return readLocal(accountKey(storageKeys.analysisHistory), []); },
-    async getRiskChanges() { return readLocal(accountKey(storageKeys.riskChanges), []); },
-    async login(credentials) {
-      await delay(240);
-      return {
-        token: "demo-token",
-        user: { id: "u-001", name: "Анна Иванова", email: credentials.email, role: "Аналитик рисков", department: "Проектное финансирование" },
-      };
-    },
-    async register(profile) {
-      await delay(280);
-      return {
-        token: "demo-token",
-        user: { id: "u-new", name: profile.name, email: profile.email, role: "Аналитик рисков", department: profile.department || "Проектное финансирование" },
-      };
-    },
-  };
-
-  function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-
-  async function request(path, options = {}) {
-    const response = await fetch(`${config.baseUrl}${path}`, {
-      ...options,
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    });
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`API ${response.status}: ${detail || response.statusText}`);
-    }
-    if (response.status === 204) return null;
-    return response.json();
+  async function analyzeProject(projectInput) {
+    const [projects, events] = await Promise.all([normalizedProjects(), normalizedEvents()]);
+    const project = findProject(projectInput, projects);
+    const projectEvents = events.filter((event) => projectEventMatch(event, project));
+    const score = projectEvents.length ? Math.max(...projectEvents.map((event) => event.score || 0)) : project.score || 0;
+    const level = riskLevelFromScore(score);
+    const analysis = {
+      project_id: project.id || null,
+      project_name: project.name,
+      level,
+      score,
+      summary: analysisSummary(project, projectEvents, level),
+      drivers: driverRows(projectEvents),
+      events: sortByDateDesc(projectEvents).slice(0, 8),
+      model_version: "backend-impact-signals",
+      analyzed_at: new Date().toISOString(),
+    };
+    recordAnalysis(analysis);
+    return analysis;
   }
 
-  // REAL API BOUNDARY
-  // Keep all backend URLs in this object. Each response must match
-  // API_CONTRACT.md. If the backend contract changes, adapt it here instead of
-  // scattering fetch calls across the page components.
-  const remote = {
-    getOverview: () => request("/overview"),
-    analyze: (projectInput) => request("/analysis", {
-      method: "POST",
-      body: JSON.stringify(typeof projectInput === "object" ? projectInput : { project_name: projectInput }),
-    }),
-    getAlerts: (level = "ALL") => request(`/alerts?level=${encodeURIComponent(level)}&limit=100`),
-    getProjects: (query = "", level = "ALL") => request(`/projects?query=${encodeURIComponent(query)}&level=${encodeURIComponent(level)}`),
-    getEvents: () => request("/events?limit=100"),
-    explainImpact: (eventId, question) => request("/ai/impact", { method: "POST", body: JSON.stringify({ event_id: eventId, question }) }),
-    getAnalysisHistory: () => request("/analysis-history?limit=100"),
-    getRiskChanges: () => request("/risk-changes?limit=100"),
-    login: (credentials) => request("/auth/login", { method: "POST", body: JSON.stringify(credentials) }),
-    register: (profile) => request("/auth/register", { method: "POST", body: JSON.stringify(profile) }),
-  };
+  function isToday(value) {
+    const date = new Date(value);
+    const now = new Date();
+    return date.toDateString() === now.toDateString();
+  }
 
-  window.api = config.useMock ? mocks : remote;
+  function eventImpact(event, question) {
+    const delta = event.level === "RED" ? 18 : event.level === "YELLOW" ? 7 : -2;
+    const confidence = event.level === "RED" ? 90 : event.level === "YELLOW" ? 78 : 70;
+    return {
+      event_id: event.id,
+      project_name: event.project_name,
+      question,
+      verdict: event.level === "RED"
+        ? "Существенно повышает риск проекта"
+        : event.level === "YELLOW"
+          ? "Умеренно повышает риск проекта"
+          : "Не повышает текущий риск",
+      detailed_analysis: `${event.title}. Категория: ${event.category}. Источник: ${event.source}. ${event.summary}`,
+      risk_delta: delta,
+      confidence,
+      factors: [event.category, event.source, event.project_name].filter(Boolean),
+      recommendations: event.level === "RED"
+        ? ["Проверить первоисточник", "Сверить событие с проектной декларацией", "Назначить ручную проверку"]
+        : ["Продолжить мониторинг", "Проверить повторяемость сигнала"],
+      generated_at: new Date().toISOString(),
+    };
+  }
+
+  async function getOverview() {
+    const [projects, events] = await Promise.all([normalizedProjects(), normalizedEvents()]);
+    return {
+      stats: {
+        projects_total: projects.length,
+        critical_projects: projects.filter((project) => project.level === "RED").length,
+        events_today: events.filter((event) => isToday(event.published_at)).length,
+        sources_online: new Set(events.map((event) => event.source).filter(Boolean)).size,
+      },
+      recent_events: events.slice(0, 4),
+    };
+  }
+
+  async function getProjects(query = "", level = "ALL") {
+    const projects = await normalizedProjects();
+    const normalizedQuery = normalizeText(query).toLowerCase();
+    return projects.filter((project) => {
+      const matchesLevel = level === "ALL" || project.level === level;
+      const haystack = `${project.name} ${project.city} ${project.developer}`.toLowerCase();
+      return matchesLevel && (!normalizedQuery || haystack.includes(normalizedQuery));
+    });
+  }
+
+  async function getEvents() {
+    return normalizedEvents();
+  }
+
+  async function getAlerts(level = "ALL") {
+    const events = await normalizedEvents();
+    return events.filter((event) => event.level !== "GREEN" && (level === "ALL" || event.level === level));
+  }
+
+  async function explainImpact(eventId, question) {
+    const events = await normalizedEvents();
+    const event = events.find((item) => item.id === eventId) || events[0];
+    if (!event) throw new Error("В backend пока нет новостей для разбора");
+    return eventImpact(event, question);
+  }
+
+  async function getAnalysisHistory() {
+    return readLocal(accountKey(storageKeys.analysisHistory), []);
+  }
+
+  async function getRiskChanges() {
+    return readLocal(accountKey(storageKeys.riskChanges), []);
+  }
+
+  async function login(credentials) {
+    const email = normalizeText(credentials.email, "analyst@gpb.ru");
+    const savedUsers = readLocal(`risk-intelligence:${storageKeys.users}`, {});
+    const user = savedUsers[email] || {
+      id: email,
+      name: email.split("@")[0],
+      email,
+      role: "Аналитик рисков",
+      department: "Проектное финансирование",
+    };
+    return { token: `local-${Date.now()}`, user };
+  }
+
+  async function register(profile) {
+    const email = normalizeText(profile.email);
+    const user = {
+      id: email || `user-${Date.now()}`,
+      name: normalizeText(profile.name, "Аналитик"),
+      email,
+      role: "Аналитик рисков",
+      department: normalizeText(profile.department, "Проектное финансирование"),
+    };
+    const savedUsers = readLocal(`risk-intelligence:${storageKeys.users}`, {});
+    savedUsers[user.email] = user;
+    writeLocal(`risk-intelligence:${storageKeys.users}`, savedUsers);
+    return { token: `local-${Date.now()}`, user };
+  }
+
+  window.api = {
+    getOverview,
+    analyze: analyzeProject,
+    getAlerts,
+    getProjects,
+    getEvents,
+    explainImpact,
+    getAnalysisHistory,
+    getRiskChanges,
+    login,
+    register,
+    searchProjectsByName: (query, limit = 20) => searchTable("projects", "name", query, limit),
+  };
 })();
