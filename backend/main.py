@@ -4,7 +4,9 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from sqlalchemy import func
 
+from db.__all_models import *
 import db
+
 
 
 app = Flask(__name__)
@@ -20,12 +22,6 @@ except Exception as e:
     raise
 
 
-def json_response(payload, status=200):
-    if isinstance(payload, list):
-        data = [item.to_dict() if hasattr(item, "to_dict") else item for item in payload]
-    else:
-        data = payload.to_dict() if hasattr(payload, "to_dict") else payload
-    return jsonify(data), status
 
 def error_response(message, status=400):
     return jsonify({"error": message}), status
@@ -46,6 +42,7 @@ def db_session_wrapper(f):
     return decorated_function
 
 
+
 @app.get("/health")
 @app.get("/api/health")
 def health():
@@ -58,7 +55,7 @@ def health():
 @app.get("/api/search/<table>")
 @db_session_wrapper
 def search(db_sess, table):
-    """Search across projects and news.
+    """Search information in table.
 
     Query Parameters:
     - q: search query (required)
@@ -72,15 +69,34 @@ def search(db_sess, table):
             return error_response("Search query is required", 400)
         if not stype:
             return error_response("Specific type is required", 400)
+        if table in FORBIDDEN_TABLES:
+            return error_response(f'This table "{table}" is forbidden in API', 403)
 
-        results = db_sess.query(db.TABLES[table]).filter(
-            func.lower(getattr(db.TABLES[table], stype)).contains(
+        results = db_sess.query(TABLES[table]).filter(
+            func.lower(getattr(TABLES[table], stype)).contains(
                 query_string.lower())).limit(limit).all()
-        results = [n.to_dict() for n in results]
-
-        return json_response(results), 200
+        return jsonify([n.to_dict() for n in results]), 200
     except Exception as e:
         return error_response(str(e), 400)
+
+
+@app.get("/api/get/<table>")
+@db_session_wrapper
+def get(db_sess, table):
+    """Simply get information from table.
+
+    Query Parameters:
+    - limit: max results - default: 20"""
+    try:
+        limit = request.args.get("limit", 20, type=int)
+        if table in FORBIDDEN_TABLES:
+            return error_response(f'This table "{table}" is forbidden in API', 403)
+
+        results = db_sess.query(TABLES[table]).limit(limit).all()
+        return jsonify([n.to_dict() for n in results]), 200
+    except Exception as e:
+        return error_response(str(e), 400)
+
 
 
 if __name__ == "__main__":
