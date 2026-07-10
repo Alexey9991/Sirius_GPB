@@ -53,8 +53,6 @@ async function renderProfile() {
     const user = state.currentUser;
     try {
       if (!state.projects.length) state.projects = await window.api.getProjects();
-      if (!state.events.length) state.events = await window.api.getEvents();
-      if (!state.notifications.length) state.notifications = state.events.map((event, index) => ({ ...event, read: index > 2 }));
       [state.analysisHistory, state.riskChanges] = await Promise.all([
         window.api.getAnalysisHistory(),
         window.api.getRiskChanges(),

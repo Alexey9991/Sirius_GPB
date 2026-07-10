@@ -86,10 +86,7 @@ async function renderDashboard(pendingAnalysis = "") {
     }
     loading();
     try {
-      state.overview ||= await window.api.getOverview();
-      if (!state.projects.length) state.projects = await window.api.getProjects();
       if (!state.analysisHistory.length) state.analysisHistory = await window.api.getAnalysisHistory();
-      const data = state.overview;
       const searchHistory = readSearchHistory();
       const historyItems = (searchHistory.length ? searchHistory : state.analysisHistory).slice(0, 4);
       app.innerHTML = pageHtml("dashboard", {
