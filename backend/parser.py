@@ -1,109 +1,118 @@
-import db
+import os
+import json
+import queue
+import threading
+from datetime import datetime
+from sqlalchemy.orm import Session
+from db import global_init, create_session
 from db.__all_models import *
 from news_parsers import import_parsers
-from sqlalchemy.orm import Session
-import json, os, csv, tqdm, queue, threading
-from datetime import datetime
+import tqdm
 
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "dbtest")
-db.global_init(os.path.join(DB_PATH, "db.sqlite3"))
-db_sess = db.create_session()
-db_engine = db_sess.get_bind()
-parsers = import_parsers()
-num_workers = 10
+
+class NewsImporter:
+    def __init__(self, db_url: str=None, workers: int=10):
+        self.db_url = db_url
+        self.workers = workers
+        self.parsers = import_parsers()
+        self.tasks = queue.Queue()
+        self.progress = queue.Queue()
+        self.to_save = queue.Queue()
+        self.stop = threading.Event()
+        self.engine = global_init(db_url)
+        self.session = create_session()
+
+    def run(self, filepath: str):
+        reader = threading.Thread(target=self._reader, args=(filepath,), daemon=True)
+        reader.start()
+        workers = [threading.Thread(target=self._worker, daemon=True) for _ in range(self.workers)]
+        for w in workers: w.start()
+        self._monitor(sum(1 for _ in open(filepath, 'r', encoding='utf-8')))
+        for w in workers: w.join()
+        reader.join()
 
 
-filepath = os.path.join(DB_PATH, "news_merged_20260624_125713.jsonl")
-with open(filepath, 'r', encoding='utf-8') as f:
-    total_lines = sum(1 for _ in f)
+    def _reader(self, filepath):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                if self.stop.is_set():
+                    break
+                self.tasks.put(json.loads(line))
+        for _ in range(self.workers):
+            self.tasks.put(None)
 
-tasks_queue = queue.Queue()
-progress_queue = queue.Queue()
-save_queue = queue.Queue()
-stop_event = threading.Event()
-
-def reader():
-    from collections import Counter
-    sources = []
-    with open(filepath, 'r', encoding='utf-8') as f:
-        for line in f:
-            if stop_event.is_set():
+    def _worker(self):
+        sess = Session(self.engine)
+        while True:
+            task = self.tasks.get()
+            if task is None:
                 break
-            nowost = json.loads(line)
-            sources.append(nowost["source"])
-            tasks_queue.put(nowost)
-    print(dict(Counter(sources)))
-    exit()
-    for _ in range(num_workers):
-        tasks_queue.put(None)
+            parser = self._get_parser(task["url"])
+            if not parser:
+                self.progress.put(1)
+                continue
+            try:
+                data = parser.get_news(task["url"])
+                if data.get("title"):
+                    news = News(
+                        id=task["id"],
+                        title=data["title"],
+                        content=data["content"],
+                        date=datetime.strptime(task["published_at"], "%Y-%m-%d").date(),
+                        source=task["source"],
+                        category=data.get("category")
+                    )
+                    if not sess.query(News).filter(News.id == news.id).first():
+                        self.to_save.put(news)
+                self.progress.put(1)
+            except Exception:
+                self.progress.put(1)
+        sess.close()
 
-def worker():
-    sess = Session(db_engine)
-    while True:
-        task = tasks_queue.get()
-        if task is None:
-            break
-        nowost = task
-        parser = next((p for prefix, p in parsers.items()
-                       if nowost["url"].startswith(prefix)), None)
-        if not parser:
-            progress_queue.put(1)
-            continue
+    def _get_parser(self, url):
+        for prefix, parser in self.parsers.items():
+            if url.startswith(prefix):
+                return parser
+        return None
+
+    def _monitor(self, total):
+        batch = []
+        with tqdm.tqdm(total=total, desc="Импорт", unit="запись") as pbar:
+            while True:
+                self._process_progress(pbar)
+                self._flush_batch(batch)
+                if self._done():
+                    break
+        self.session.close()
+
+    def _process_progress(self, pbar):
         try:
-            got = parser.get_news(nowost["url"])
-            existing = sess.query(News).filter(News.id == nowost["id"]).first()
-            if not existing and got.get("title"):
-                news = News()
-                news.id = nowost["id"]
-                news.title = got["title"]
-                news.content = got["content"]
-                news.date = datetime.strptime(nowost["published_at"], "%Y-%m-%d").date()
-                news.source = nowost["source"]
-                news.category = got["category"]
-                save_queue.put(news)
-            progress_queue.put(1)
-        except Exception as e:
-            print(f"Ошибка в воркере: {e}")
-            progress_queue.put(1)
-            continue
-    sess.close()
-
-reader_thread = threading.Thread(target=reader, daemon=True)
-reader_thread.start()
-workers = []
-for _ in range(num_workers):
-    t = threading.Thread(target=worker, daemon=True)
-    t.start()
-    workers.append(t)
-processed = 0
-save_batch = []
-sess_main = Session(db_engine)
-
-with tqdm.tqdm(total=total_lines, desc="Импорт новостей", unit="запись") as pbar:
-    while True:
-        try:
-            prog = progress_queue.get(timeout=0.1)
-            if prog == 1:
-                processed += 1
+            if self.progress.get(timeout=0.1) == 1:
                 pbar.update(1)
         except queue.Empty:
             pass
+
+    def _flush_batch(self, batch):
         try:
-            news = save_queue.get_nowait()
-            save_batch.append(news)
-            if len(save_batch) >= 100:
-                for n in save_batch:
-                    sess_main.merge(n)
-                sess_main.commit()
-                save_batch.clear()
+            news = self.to_save.get_nowait()
+            batch.append(news)
+            if len(batch) >= 100:
+                for n in batch:
+                    self.session.merge(n)
+                self.session.commit()
+                batch.clear()
         except queue.Empty:
             pass
 
-        if all(not t.is_alive() for t in workers) and tasks_queue.empty() and save_queue.empty():
-            break
+    def _done(self):
+        return (all(not t.is_alive() for t in threading.enumerate() 
+                    if t.name.startswith("Thread") and t.daemon) 
+                and self.tasks.empty() and self.to_save.empty())
 
-sess_main.close()
-reader_thread.join()
-for t in workers:
-    t.join()
+
+
+if __name__ == "__main__":
+    importer = NewsImporter(workers=10)
+    importer.run(os.path.join(os.path.dirname(__file__), "dbtest",
+                              "news_merged_20260624_125713.jsonl"))

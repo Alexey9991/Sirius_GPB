@@ -29,11 +29,11 @@ class ImpactSignal(SqlAlchemyBase, JsonSerializableMixin):
     created_at = sqlalchemy.Column(
         sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
 
-    news = orm.relationship("News", back_populates="impact_signals")
+    news = orm.relationship("News", back_populates="impact_signal")
     city = orm.relationship("City", back_populates="impact_signals")
     developer = orm.relationship("Developer", back_populates="impact_signals")
     project = orm.relationship("Project", back_populates="impact_signals")
-    alerts = orm.relationship(
+    alert = orm.relationship(
         "Alert", back_populates="impact_signal", cascade="all, delete-orphan")
 
 
@@ -46,8 +46,8 @@ class Subscription(SqlAlchemyBase, JsonSerializableMixin):
     type = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     item_id = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 
-    user = orm.relationship("User", back_populates="subscriptions")
-    alerts = orm.relationship(
+    user = orm.relationship("User", back_populates="subscription")
+    alert = orm.relationship(
         "Alert", back_populates="subscription", cascade="all, delete-orphan")
 
 
@@ -64,5 +64,5 @@ class Alert(SqlAlchemyBase, JsonSerializableMixin):
     created_at = sqlalchemy.Column(
         sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
 
-    impact_signal = orm.relationship("ImpactSignal", back_populates="alerts")
-    subscription = orm.relationship("Subscription", back_populates="alerts")
+    impact_signal = orm.relationship("ImpactSignal", back_populates="alert")
+    subscription = orm.relationship("Subscription", back_populates="alert")
