@@ -9,15 +9,14 @@
       <button class="secondary-btn" id="refreshFeed">Обновить ленту</button>
     </header>
     <div class="stat-grid three-columns">
-      <div class="stat"><small>Публикаций в ленте</small><strong>[[EVENTS_COUNT]]</strong><span class="delta">из подключённых источников</span></div>
-      <div class="stat risk-stat"><small>Критические риски</small><strong>[[CRITICAL_COUNT]]</strong><span class="delta negative">требуют проверки</span></div>
-      <div class="stat"><small>Средние риски</small><strong>[[MEDIUM_COUNT]]</strong><span class="delta">на наблюдении</span></div>
+      <div class="stat stat-feed"><small>Публикаций в ленте</small><strong id="newsEventsCount">[[EVENTS_COUNT]]</strong></div>
+      <div class="stat stat-critical"><small>Критические риски</small><strong id="newsCriticalCount">[[CRITICAL_COUNT]]</strong></div>
+      <div class="stat stat-medium"><small>Средние риски</small><strong id="newsMediumCount">[[MEDIUM_COUNT]]</strong></div>
     </div>
     <div class="news-layout">
       <section class="card">
         <div class="card-head">
           <div><h2>Все события</h2><span class="object-meta">Новости отсортированы по времени публикации</span></div>
-          <span class="online">● LIVE</span>
         </div>
         <div class="toolbar">
           <input id="newsSearch" class="input" placeholder="Поиск по новости или проекту">
@@ -30,16 +29,6 @@
         </div>
         <div id="feed" class="data-list">[[FEED_ROWS]]</div>
       </section>
-      <aside class="news-sidebar">
-        <section class="card risk-digest">
-          <div class="card-head"><div><span class="eyebrow">Требуют внимания</span><h2>Риски</h2></div><span class="chip red">[[ALERTS_COUNT]]</span></div>
-          <div id="riskDigest" class="data-list">[[ALERT_ROWS]]</div>
-        </section>
-        <section class="card">
-          <div class="card-head"><h2>Источники</h2></div>
-          <div class="source-list">[[SOURCE_ROWS]]</div>
-        </section>
-      </aside>
     </div>
   </div>
 </template>

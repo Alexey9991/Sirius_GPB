@@ -2,7 +2,7 @@
   <div class="page-enter projects-page">
     <section class="card">
       <div class="toolbar project-toolbar">
-        <input id="projectSearch" class="input" placeholder="Название, город или застройщик">
+        <input id="projectSearch" class="input" placeholder="Название ЖК">
         <select id="projectLevel" class="select">
           <option value="ALL">Все риски</option>
           <option value="RED">Критические</option>
@@ -39,6 +39,9 @@
         <div id="projectBody" class="project-table-body" role="rowgroup">
           [[PROJECT_ROWS]]
         </div>
+      </div>
+      <div class="project-load-more" hidden>
+        <button id="loadMoreProjects" class="secondary-btn" type="button">Загрузить ещё</button>
       </div>
     </section>
   </div>
