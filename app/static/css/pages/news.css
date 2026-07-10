@@ -18,7 +18,13 @@
 
 .feed-title-row .chip { flex: 0 0 auto; }
 
-.news-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, .75fr); gap: 18px; align-items: start; }
+.news-layout { display: block; }
+
+.stat-feed small { color: #0057a8; }
+
+.stat-critical small { color: var(--red); }
+
+.stat-medium small { color: #b77a13; }
 
 .news-sidebar { position: sticky; top: 98px; }
 
