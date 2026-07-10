@@ -21,8 +21,6 @@ class ParseNews(SqlAlchemyBase, JsonSerializableMixin):
     news = orm.relationship(
         "News", back_populates="parse_news",
         cascade="all, delete-orphan", uselist=False)
-    impact_signals = orm.relationship(
-        "ImpactSignal", back_populates="news", cascade="all, delete-orphan")
 
 
 class News(SqlAlchemyBase, JsonSerializableMixin):
@@ -40,3 +38,5 @@ class News(SqlAlchemyBase, JsonSerializableMixin):
         sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
 
     parse_news = orm.relationship("ParseNews", back_populates="news", uselist=False)
+    impact_signal = orm.relationship(
+        "ImpactSignal", back_populates="news", cascade="all, delete-orphan")

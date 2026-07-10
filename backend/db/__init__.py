@@ -1,13 +1,8 @@
-"""
-Database session manager with support for SQLite, PostgreSQL, MySQL, etc.
-Supports DATABASE_URL environment variable or individual parameters.
-"""
+from urllib.parse import urlparse
 from sqlalchemy.orm import Session
 import sqlalchemy.orm as orm
 import sqlalchemy as sa
 import os
-import sys
-from urllib.parse import urlparse
 
 SqlAlchemyBase = orm.declarative_base()
 
@@ -113,9 +108,3 @@ def mask_credentials(db_url: str) -> str:
         masked_url = db_url.replace(parsed.password, "***")
         return masked_url
     return db_url
-
-
-TABLES = {}
-for name, obj in list(sys.modules[__name__].__dict__.items()):
-    if isinstance(obj, type) and issubclass(obj, SqlAlchemyBase) and obj is not SqlAlchemyBase:
-        TABLES[obj.__tablename__] = obj
