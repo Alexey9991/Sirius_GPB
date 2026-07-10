@@ -1,3 +1,72 @@
+/* Projects page styles. */
+
+.table-wrap { overflow-x: auto; }
+
+.progress { min-width: 110px; }
+
+.progress-line { height: 6px; margin-top: 5px; border-radius: 99px; background: #e7ebf0; }
+
+.progress-line span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+
+.bar,
+.confidence > div,
+.progress-line {
+  height: 6px;
+  background: #e1e7ee;
+}
+
+.progress-line span,
+.confidence i {
+  background: #008578;
+}
+
+.subscribe-project-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.project-toolbar .select {
+  min-width: 190px;
+}
+
+.sort-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sort-button:hover {
+  color: #0057a8;
+}
+
+@media (max-width: 720px) {
+.project-toolbar .select {
+    min-width: 100%;
+  }
+
+.subscribe-project-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+.table-wrap {
+    overflow-x: auto;
+  }
+
+.table-wrap table {
+    min-width: 760px;
+  }
+}
+
+/* Project table layout. */
+
 .projects-page .card {
   margin-bottom: 0;
 }
