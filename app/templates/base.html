@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPB Risk Desk</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}?v=20260709-dashboard-history-1" />
+  {% block styles %}{% endblock %}
+</head>
+<body data-initial-route="{{ initial_route | default('dashboard') }}">
+  <div class="app-shell">
+    {% include "partials/topbar.html" %}
+    {% include "partials/nav.html" %}
+    <main id="app" class="page-container" aria-live="polite"></main>
+  </div>
+
+  {% include "partials/overlays.html" %}
+  {% include "pages/_all.html" %}
+
+  <script>
+    window.APP_CONFIG = {
+      useMock: {{ "true" if use_mock else "false" }},
+      baseUrl: "{{ api_base_url }}"
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/core/templates.js') }}?v=20260709-dashboard-history-1" defer></script>
+  <script src="{{ url_for('static', filename='js/api.js') }}?v=20260709-dashboard-history-1" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}?v=20260709-dashboard-history-1" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
