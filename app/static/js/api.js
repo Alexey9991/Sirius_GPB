@@ -29,6 +29,9 @@
     eventsRequest: null,
     normalizedProjectsRequest: null,
     normalizedProjectsWithEventsRequest: null,
+    projectsLimit: 0,
+    projectsRequestLimit: 0,
+    normalizedProjectsLimit: 0,
   };
 
   function apiBaseUrl() {
@@ -63,8 +66,25 @@
     return Math.max(min, Math.min(max, number));
   }
 
+  function decodeHtmlEntities(value) {
+    const text = String(value ?? "");
+    if (!/[&][a-z0-9#]+;/i.test(text)) return text;
+    if (typeof document !== "undefined") {
+      const textarea = document.createElement("textarea");
+      textarea.innerHTML = text;
+      return textarea.value;
+    }
+    return text
+      .replace(/&quot;/g, '"')
+      .replace(/&#34;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">");
+  }
+
   function normalizeText(value, fallback = "") {
-    return String(value ?? fallback).trim();
+    return decodeHtmlEntities(value ?? fallback).trim();
   }
 
   function compactText(value, max = 190) {
@@ -76,6 +96,12 @@
     if (!value) return new Date().toISOString();
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  }
+
+  function normalizeLimit(limit = DEFAULT_LIMIT) {
+    const number = Number(limit);
+    if (!Number.isFinite(number) || number <= 0) return DEFAULT_LIMIT;
+    return Math.max(DEFAULT_LIMIT, Math.ceil(number));
   }
 
   function riskScore(value) {
@@ -133,23 +159,33 @@
   }
 
   async function getTable(table, limit = DEFAULT_LIMIT) {
-    const rows = await request(tableUrl(table, { limit }));
+    const rows = await request(tableUrl(table, { limit: normalizeLimit(limit) }));
     return Array.isArray(rows) ? rows : [];
   }
 
   async function searchTable(table, stype, query, limit = DEFAULT_LIMIT) {
-    const rows = await request(searchUrl(table, { stype, q: query, limit }));
+    const rows = await request(searchUrl(table, { stype, q: normalizeText(query), limit: normalizeLimit(limit) }));
     return Array.isArray(rows) ? rows : [];
   }
 
-  async function backendProjects() {
-    if (!cache.projects) {
-      cache.projectsRequest ||= getTable("projects").finally(() => { cache.projectsRequest = null; });
-      cache.projects = await cache.projectsRequest;
-      cache.normalizedProjects = null;
-      cache.normalizedProjectsWithEvents = null;
+  async function backendProjects(limit = DEFAULT_LIMIT, options = {}) {
+    const normalizedLimit = normalizeLimit(limit);
+    if (!options.force && cache.projects && cache.projectsLimit >= normalizedLimit) {
+      return cache.projects.slice(0, normalizedLimit);
     }
-    return cache.projects;
+    if (!cache.projectsRequest || cache.projectsRequestLimit !== normalizedLimit || options.force) {
+      cache.projectsRequestLimit = normalizedLimit;
+      cache.projectsRequest = getTable("projects", normalizedLimit).finally(() => {
+        cache.projectsRequest = null;
+        cache.projectsRequestLimit = 0;
+      });
+    }
+    cache.projects = await cache.projectsRequest;
+    cache.projectsLimit = normalizedLimit;
+    cache.normalizedProjects = null;
+    cache.normalizedProjectsWithEvents = null;
+    cache.normalizedProjectsLimit = 0;
+    return cache.projects.slice(0, normalizedLimit);
   }
 
   async function backendNews() {
@@ -173,7 +209,9 @@
   }
 
   function relationName(row, relationKey, fallbackKey) {
-    return normalizeText(row?.[relationKey]?.name || row?.[fallbackKey] || "");
+    const relation = row?.[relationKey];
+    const value = relation && typeof relation === "object" ? relation.name : relation;
+    return normalizeText(value || row?.[fallbackKey] || "");
   }
 
   function projectEventMatch(event, project) {
@@ -304,6 +342,7 @@
       score,
       level: riskLevelFromScore(score),
       completion: estimateCompletion(project),
+      created_at: normalizeDate(project.created_at),
       updated_at: latestProjectDate(project, related),
       planned_rve_date: project.planned_rve_date || null,
       signals_count: related.length,
@@ -312,13 +351,20 @@
   }
 
   async function normalizedProjects(options = {}) {
-    const projects = await backendProjects();
+    const limit = normalizeLimit(options.limit);
+    const query = normalizeText(options.query);
+    const projects = query
+      ? await searchTable("projects", "name", query, limit)
+      : await backendProjects(limit, { force: options.force });
     const events = options.events || null;
     const withEvents = Array.isArray(events);
+    const canUseCache = !query && !options.force;
 
-    if (!withEvents && cache.normalizedProjects) return cache.normalizedProjects;
+    if (!withEvents && canUseCache && cache.normalizedProjects && cache.normalizedProjectsLimit >= limit) {
+      return cache.normalizedProjects.slice(0, limit);
+    }
     if (withEvents && cache.normalizedProjectsWithEvents) return cache.normalizedProjectsWithEvents;
-    if (!withEvents && cache.normalizedProjectsRequest) return cache.normalizedProjectsRequest;
+    if (!withEvents && canUseCache && cache.normalizedProjectsRequest) return cache.normalizedProjectsRequest;
     if (withEvents && cache.normalizedProjectsWithEventsRequest) return cache.normalizedProjectsWithEventsRequest;
 
     const build = Promise.resolve().then(() => {
@@ -340,7 +386,10 @@
 
       const normalized = [...byId.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "ru"));
       if (withEvents) cache.normalizedProjectsWithEvents = normalized;
-      else cache.normalizedProjects = normalized;
+      else if (!query) {
+        cache.normalizedProjects = normalized;
+        cache.normalizedProjectsLimit = limit;
+      }
       return normalized;
     }).finally(() => {
       if (withEvents) cache.normalizedProjectsWithEventsRequest = null;
@@ -368,6 +417,7 @@
         score: 0,
         level: "GREEN",
         completion: 0,
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
   }
@@ -495,13 +545,11 @@
     };
   }
 
-  async function getProjects(query = "", level = "ALL") {
-    const projects = await normalizedProjects();
-    const normalizedQuery = normalizeText(query).toLowerCase();
+  async function getProjects(query = "", level = "ALL", limit = DEFAULT_LIMIT, options = {}) {
+    const projects = await normalizedProjects({ query, limit, force: options.force });
     return projects.filter((project) => {
       const matchesLevel = level === "ALL" || project.level === level;
-      const haystack = `${project.name} ${project.city} ${project.developer}`.toLowerCase();
-      return matchesLevel && (!normalizedQuery || haystack.includes(normalizedQuery));
+      return matchesLevel;
     });
   }
 
@@ -568,6 +616,6 @@
     getRiskChanges,
     login,
     register,
-    searchProjectsByName: (query, limit = DEFAULT_LIMIT) => searchTable("projects", "name", query, limit),
+    searchProjectsByName: (query, limit = DEFAULT_LIMIT) => normalizedProjects({ query, limit, force: true }),
   };
 })();
