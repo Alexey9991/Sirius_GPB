@@ -2,8 +2,10 @@ from flask import Flask, render_template, abort
 import os
 
 
+
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"),
             static_folder=os.path.join(os.path.dirname(__file__), "static"))
+
 
 PAGE_ROUTES = {
     "index.html": "dashboard",
@@ -19,14 +21,11 @@ PAGE_ROUTES = {
     "register.html": "register",
 }
 
-
 def render_page(template_name):
     return render_template(
-        template_name,
-        initial_route=PAGE_ROUTES[template_name],
-        use_mock=os.getenv("USE_MOCK_API", "true").lower() in {"1", "true", "yes", "on"},
-        api_base_url=os.getenv("API_BASE_URL", ""),
-    )
+        template_name, initial_route=PAGE_ROUTES[template_name],
+        use_mock=True, api_base_url=os.getenv("API_BASE_URL", ""))
+
 
 
 @app.route("/")
@@ -46,6 +45,7 @@ def serve_page(route_name):
 @app.route("/<path:_path>")
 def spa_fallback(_path):
     abort(404)
+
 
 
 if __name__ == "__main__":
