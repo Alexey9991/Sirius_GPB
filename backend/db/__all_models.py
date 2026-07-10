@@ -13,4 +13,3 @@ for name, obj in list(sys.modules[__name__].__dict__.items()):
         TABLES[obj.__tablename__] = obj
 
 FORBIDDEN_TABLES = os.getenv("FORBIDDEN_TABLES")
-print(FORBIDDEN_TABLES)
