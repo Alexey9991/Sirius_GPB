@@ -131,8 +131,23 @@ class RiaRU(NewsParser):
 
 
 
+class RBK(NewsParser):
+    def __init__(self):
+        super().__init__(
+            "https://realty.rbc.ru", ".no-wrap.g-inline-text-badges__text", "https://realty.rbc.ru/company_news/",
+            get_news={
+                "title": '.article__header__title-in.js-slide-title',
+                "content": 'div.article__text.article__text_free.js-article-body div.article__text__overview',
+                "date": "time.article__header__date",
+                "category": "a.article__header__category"
+            }
+        )
+
+
+
 parsers = {
-    "https://realty.ria.ru": RiaRU
+    "https://realty.ria.ru": RiaRU,
+    "https://realty.rbc.ru": RBK
 }
 
 
