@@ -4,9 +4,9 @@
   const globalSearch = document.getElementById("globalSearch");
   const notificationOverlay = document.getElementById("notificationOverlay");
   const initialRoute = document.body.dataset.initialRoute || "dashboard";
-  const defaultUser = { id: "u-001", name: "Анна Иванова", email: "a.ivanova@gpb.ru", role: "Аналитик рисков", department: "Проектное финансирование" };
-  const defaultSubscriptions = { locations: ["Москва", "Екатеринбург"], developers: ["ГК Север Девелопмент"], projects: ["ЖК Северный берег"] };
-  const state = { overview: null, analysis: null, streamInsight: null, pendingInsightQuestion: "", selectedImpactEventId: "", alerts: [], projects: [], events: [], notifications: [], notificationsInitialized: false, analysisHistory: [], riskChanges: [], pendingAnalysis: "", pendingProjectContext: null, searchQuery: "", projectSort: "risk-desc", subscriptions: readUserSubscriptions(defaultUser.id), pushEnabled: localStorage.getItem("risk-intelligence:push-enabled") === "true" && "Notification" in window && Notification.permission === "granted", currentUser: defaultUser };
+  const defaultUser = null;
+  const defaultSubscriptions = { locations: [], developers: [], projects: [] };
+  const state = { overview: null, analysis: null, streamInsight: null, pendingInsightQuestion: "", selectedImpactEventId: "", alerts: [], projects: [], events: [], notifications: [], notificationsInitialized: false, analysisHistory: [], riskChanges: [], pendingAnalysis: "", pendingProjectContext: null, searchQuery: "", projectSort: "risk-desc", subscriptions: readUserSubscriptions(), backendSubscriptionsOwnerId: null, pushEnabled: localStorage.getItem("risk-intelligence:push-enabled") === "true" && "Notification" in window && Notification.permission === "granted", currentUser: null };
   const routeTitles = {
     dashboard: "Мониторинг", "ai-analysis": "ИИ-анализ потока", projects: "Объекты", news: "Поток",
     history: "Журнал", notifications: "Уведомления", profile: "Профиль аналитика", search: "Поиск", login: "Вход", register: "Регистрация",
@@ -35,8 +35,6 @@
     YELLOW: { css: "yellow", label: "Средний", color: "#f5a000" },
     GREEN: { css: "green", label: "Низкий", color: "#149447" },
   };
-  localStorage.setItem("risk-intelligence:active-user-id", defaultUser.id);
-
   function esc(value) {
     return String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#039;", '"': "&quot;" }[char]));
   }
@@ -89,6 +87,8 @@
     const user = state.currentUser;
     document.getElementById("profileAvatar").textContent = user ? initials(user.name) : "→";
     document.getElementById("profileName").textContent = user ? user.name : "Войти";
+    const profileButton = document.getElementById("profileButton");
+    if (profileButton) profileButton.dataset.route = user ? "profile" : "login";
   }
 
   function showToast(message) {
@@ -134,6 +134,22 @@
     updateHeaderUser();
   }
 
+  async function refreshSession() {
+    try {
+      const user = await window.api.whoAmI();
+      setCurrentUser(user);
+      return user;
+    } catch (error) {
+      if (window.api.isAuthError(error)) {
+        setCurrentUser(null);
+        return null;
+      }
+      setCurrentUser(null);
+      showToast(`Не удалось проверить сессию: ${error.message}`);
+      return null;
+    }
+  }
+
   function uniqueValues(items, key) {
     return [...new Set(items.map((item) => item[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru"));
   }
@@ -161,6 +177,7 @@
     const route = currentRoute();
     window.scrollTo(0, 0);
     setActiveNav(route);
+    await refreshSession();
     const renderer = pageRenderers[route] || pageRenderers.dashboard;
     if (!renderer) return renderError(new Error(`Страница не зарегистрирована: ${route}`));
     return renderer();
@@ -169,7 +186,7 @@
   const ctx = {
     app, globalSearch, notificationOverlay, initialRoute, defaultUser, defaultSubscriptions, state, routeTitles, routePaths, pendingKeys, searchHistoryKey, palette,
     esc, currentRoute, readPendingValue, readPendingJson, pageHtml, componentHtml, navigate, setActiveNav, initials, updateHeaderUser, showToast,
-    loading, renderError, emptyHtml, chip, shortTime, dateTime, subscriptionKey, readUserSubscriptions, saveUserSubscriptions, setCurrentUser,
+    loading, renderError, emptyHtml, chip, shortTime, dateTime, subscriptionKey, readUserSubscriptions, saveUserSubscriptions, setCurrentUser, refreshSession,
     uniqueValues, levelRank, projectByName, projectAnalyzeAttrs, registerPage, renderRoute,
   };
 
@@ -244,7 +261,22 @@
       return;
     }
     if (actionTarget?.dataset.action === "logout") {
-      setCurrentUser(null); state.analysisHistory = []; state.riskChanges = []; showToast("Вы вышли из системы"); navigate("login");
+      actionTarget.disabled = true;
+      try {
+        await window.api.logout();
+      } catch (error) {
+        if (!window.api.isAuthError(error)) {
+          actionTarget.disabled = false;
+          showToast(`Не удалось выйти: ${error.message}`);
+          return;
+        }
+      }
+      setCurrentUser(null);
+      state.backendSubscriptionsOwnerId = null;
+      state.analysisHistory = [];
+      state.riskChanges = [];
+      showToast("Вы вышли из системы");
+      navigate("login");
     } else if (actionTarget?.dataset.action === "edit-profile") {
       showToast("Редактирование профиля будет подключено к backend");
     }

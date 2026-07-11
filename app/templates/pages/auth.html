@@ -5,13 +5,12 @@
       <h1>Вход в Risk Desk</h1>
       <p class="auth-intro">Авторизуйтесь, чтобы видеть персональные подписки, историю анализов и уведомления аккаунта.</p>
       <form id="loginForm" class="form-stack">
-        <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" class="input" type="email" value="a.ivanova@gpb.ru" required></div>
-        <div class="field"><label for="loginPassword">Пароль</label><input id="loginPassword" class="input" type="password" value="demo1234" minlength="6" required></div>
+        <div class="field"><label for="loginUsername">Имя пользователя</label><input id="loginUsername" class="input" autocomplete="username" required></div>
+        <div class="field"><label for="loginPassword">Пароль</label><input id="loginPassword" class="input" type="password" autocomplete="current-password" minlength="6" required></div>
         <div id="loginError" class="form-error"></div>
         <button id="loginSubmit" class="primary-btn auth-submit" type="submit">Войти</button>
       </form>
       <p class="auth-switch">Нет аккаунта? <button data-route="register">Создать профиль</button></p>
-      <p class="auth-note">Демо-режим принимает любой пароль и сохраняет историю по текущему пользователю в localStorage.</p>
     </section>
   </div>
 </template>
@@ -23,13 +22,12 @@
       <h1>Регистрация аналитика</h1>
       <p class="auth-intro">Создайте профиль, чтобы подписки и история анализов были привязаны к конкретному аккаунту.</p>
       <form id="registerForm" class="form-stack">
-        <div class="field"><label for="registerName">ФИО</label><input id="registerName" class="input" autocomplete="name" required placeholder="Анна Иванова"></div>
-        <div class="field"><label for="registerEmail">Рабочий email</label><input id="registerEmail" class="input" type="email" autocomplete="email" required placeholder="analyst@gpb.ru"></div>
-        <div class="field"><label for="registerDepartment">Подразделение</label><input id="registerDepartment" class="input" value="Проектное финансирование"></div>
+        <div class="field"><label for="registerUsername">Имя пользователя</label><input id="registerUsername" class="input" autocomplete="username" required></div>
         <div class="form-row">
           <div class="field"><label for="registerPassword">Пароль</label><input id="registerPassword" class="input" type="password" minlength="6" required></div>
           <div class="field"><label for="registerConfirm">Повторите пароль</label><input id="registerConfirm" class="input" type="password" minlength="6" required></div>
         </div>
+        <label class="auth-policy"><input id="registerPolicy" type="checkbox" required><span>Я принимаю условия использования сервиса</span></label>
         <div id="registerError" class="form-error"></div>
         <button id="registerSubmit" class="primary-btn auth-submit" type="submit">Создать аккаунт</button>
       </form>

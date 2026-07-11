@@ -35,7 +35,9 @@
   };
 
   function apiBaseUrl() {
-    const raw = String(config.baseUrl || "http://localhost:8000").replace(/\/+$/, "");
+    const configured = typeof config.baseUrl === "string" ? config.baseUrl : "";
+    const raw = configured.replace(/\/+$/, "");
+    if (!raw) return "/api";
     return raw.endsWith("/api") ? raw : `${raw}/api`;
   }
 
@@ -135,6 +137,7 @@
       if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
       const fetchOptions = {
         ...options,
+        credentials: "include",
         signal: controller.signal,
       };
       delete fetchOptions.timeoutMs;
@@ -142,12 +145,21 @@
       if (Object.keys(headers).length) fetchOptions.headers = headers;
 
       const response = await fetch(url, fetchOptions);
+      const contentType = response.headers.get("content-type") || "";
+      const payload = contentType.includes("application/json")
+        ? await response.json().catch(() => null)
+        : await response.text();
       if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(`API ${response.status}: ${detail || response.statusText}`);
+        const detail = payload && typeof payload === "object"
+          ? payload.detail || payload.message || JSON.stringify(payload)
+          : payload;
+        const error = new Error(detail || response.statusText || `API ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
       }
       if (response.status === 204) return null;
-      return response.json();
+      return payload;
     } catch (error) {
       if (error.name === "AbortError") {
         throw new Error(`Бэкенд не ответил за отведённое время: ${url}`);
@@ -188,9 +200,10 @@
     return cache.projects.slice(0, normalizedLimit);
   }
 
-  async function backendNews() {
+  async function backendNews(options = {}) {
+    if (options.force) cache.news = null;
     if (!cache.news) {
-      cache.newsRequest ||= getTable("news").finally(() => { cache.newsRequest = null; });
+      cache.newsRequest ||= getTable("news", options.limit || DEFAULT_LIMIT).finally(() => { cache.newsRequest = null; });
       cache.news = await cache.newsRequest;
       cache.events = null;
       cache.normalizedProjectsWithEvents = null;
@@ -198,9 +211,10 @@
     return cache.news;
   }
 
-  async function backendSignals() {
+  async function backendSignals(options = {}) {
+    if (options.force) cache.signals = null;
     if (!cache.signals) {
-      cache.signalsRequest ||= getTable("impact_signals").finally(() => { cache.signalsRequest = null; });
+      cache.signalsRequest ||= getTable("impact_signals", options.limit || DEFAULT_LIMIT).finally(() => { cache.signalsRequest = null; });
       cache.signals = await cache.signalsRequest;
       cache.events = null;
       cache.normalizedProjectsWithEvents = null;
@@ -276,18 +290,23 @@
     return [...items].sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
   }
 
-  async function normalizedEvents() {
+  async function normalizedEvents(options = {}) {
+    if (options.force) {
+      cache.events = null;
+      cache.news = null;
+      cache.signals = null;
+    }
     if (cache.events) return cache.events;
     if (cache.eventsRequest) return cache.eventsRequest;
 
-    cache.eventsRequest = Promise.all([backendSignals(), backendNews()])
+    cache.eventsRequest = Promise.all([backendSignals(options), backendNews(options)])
       .then(([signals, news]) => {
         const signalEvents = signals.map(normalizeSignal);
         const signalNewsIds = new Set(signalEvents.map((event) => event.news_id).filter(Boolean));
         const standaloneNews = news
           .filter((news) => !signalNewsIds.has(news.id))
           .map(normalizeNews);
-        cache.events = sortByDateDesc([...signalEvents, ...standaloneNews]);
+        cache.events = sortByDateDesc([...signalEvents, ...standaloneNews]).slice(0, normalizeLimit(options.limit));
         return cache.events;
       })
       .finally(() => { cache.eventsRequest = null; });
@@ -326,7 +345,7 @@
   function latestProjectDate(project, events) {
     const dates = events.map((event) => new Date(event.published_at).getTime()).filter(Number.isFinite);
     if (project.created_at) dates.push(new Date(project.created_at).getTime());
-    return new Date(Math.max(...dates, Date.now())).toISOString();
+    return dates.length ? new Date(Math.max(...dates)).toISOString() : new Date().toISOString();
   }
 
   function normalizeProject(project, events = null) {
@@ -508,6 +527,29 @@
     return date.toDateString() === now.toDateString();
   }
 
+  function normalizeAccount(payload) {
+    const auth = payload && typeof payload === "object" ? payload : {};
+    const user = auth.user && typeof auth.user === "object" ? auth.user : auth;
+    return {
+      id: String(user.id ?? auth.user_id ?? ""),
+      name: normalizeText(user.name || user.username || user.email, "Пользователь"),
+      email: normalizeText(user.email),
+      role: normalizeText(user.role, "Пользователь"),
+      department: normalizeText(user.division || user.department),
+      subscriptions: Array.isArray(user.subscriptions) ? user.subscriptions : [],
+      session: {
+        id: auth.id ?? null,
+        created_at: auth.created_at || null,
+        last_activity: auth.last_activity || null,
+      },
+      raw: payload,
+    };
+  }
+
+  function isAuthError(error) {
+    return error?.status === 401 || error?.status === 403;
+  }
+
   function eventImpact(event, question) {
     const delta = event.level === "RED" ? 18 : event.level === "YELLOW" ? 7 : -2;
     const confidence = event.level === "RED" ? 90 : event.level === "YELLOW" ? 78 : 70;
@@ -553,8 +595,8 @@
     });
   }
 
-  async function getEvents() {
-    return normalizedEvents();
+  async function getEvents(options = {}) {
+    return normalizedEvents(options);
   }
 
   async function getAlerts(level = "ALL") {
@@ -577,32 +619,37 @@
     return readLocal(accountKey(storageKeys.riskChanges), []);
   }
 
+  async function whoAmI() {
+    const payload = await request(`${apiBaseUrl()}/who_am_i`);
+    return normalizeAccount(payload);
+  }
+
   async function login(credentials) {
-    const email = normalizeText(credentials.email, "analyst@gpb.ru");
-    const savedUsers = readLocal(`risk-intelligence:${storageKeys.users}`, {});
-    const user = savedUsers[email] || {
-      id: email,
-      name: email.split("@")[0],
-      email,
-      role: "Аналитик рисков",
-      department: "Проектное финансирование",
-    };
-    return { token: `local-${Date.now()}`, user };
+    await request(`${apiBaseUrl()}/sign/login`, {
+      method: "POST",
+      body: JSON.stringify({
+        username: normalizeText(credentials.username || credentials.email),
+        password: String(credentials.password || ""),
+      }),
+    });
+    return { user: await whoAmI() };
   }
 
   async function register(profile) {
-    const email = normalizeText(profile.email);
-    const user = {
-      id: email || `user-${Date.now()}`,
-      name: normalizeText(profile.name, "Аналитик"),
-      email,
-      role: "Аналитик рисков",
-      department: normalizeText(profile.department, "Проектное финансирование"),
-    };
-    const savedUsers = readLocal(`risk-intelligence:${storageKeys.users}`, {});
-    savedUsers[user.email] = user;
-    writeLocal(`risk-intelligence:${storageKeys.users}`, savedUsers);
-    return { token: `local-${Date.now()}`, user };
+    await request(`${apiBaseUrl()}/sign/register`, {
+      method: "POST",
+      body: JSON.stringify({
+        username: normalizeText(profile.username || profile.email || profile.name),
+        password: String(profile.password || ""),
+        password_again: String(profile.passwordAgain || profile.password_again || ""),
+        policy_check: Boolean(profile.policyCheck || profile.policy_check),
+      }),
+    });
+    return { user: await whoAmI() };
+  }
+
+  async function logout() {
+    return request(`${apiBaseUrl()}/logout`);
   }
 
   window.api = {
@@ -614,8 +661,11 @@
     explainImpact,
     getAnalysisHistory,
     getRiskChanges,
+    whoAmI,
+    isAuthError,
     login,
     register,
+    logout,
     searchProjectsByName: (query, limit = DEFAULT_LIMIT) => normalizedProjects({ query, limit, force: true }),
   };
 })();
