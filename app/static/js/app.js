@@ -96,7 +96,7 @@
     toast.textContent = message;
     toast.classList.add("visible");
     clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => toast.classList.remove("visible"), 10000);
+    showToast.timer = setTimeout(() => toast.classList.remove("visible"), 20000);
   }
 
   function loading() { app.innerHTML = componentHtml("loader"); }

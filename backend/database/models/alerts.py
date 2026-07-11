@@ -1,12 +1,11 @@
+from database.models.__meta__ import SQLBase
+from sqlalchemy import orm
 import sqlalchemy
 import datetime
 import uuid
-from sqlalchemy import orm
-from . import SqlAlchemyBase
-from .json_mixin import JsonSerializableMixin
 
 
-class ImpactSignal(SqlAlchemyBase, JsonSerializableMixin):
+class ImpactSignal(SQLBase):
     __tablename__ = "impact_signals"
 
     id = sqlalchemy.Column(
@@ -29,15 +28,15 @@ class ImpactSignal(SqlAlchemyBase, JsonSerializableMixin):
     created_at = sqlalchemy.Column(
         sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
 
-    news = orm.relationship("News", back_populates="impact_signal")
-    city = orm.relationship("City", back_populates="impact_signals")
-    developer = orm.relationship("Developer", back_populates="impact_signals")
-    project = orm.relationship("Project", back_populates="impact_signals")
+    news = orm.relationship("News", back_populates="impact_signal", lazy="selectin")
+    city = orm.relationship("City", back_populates="impact_signals", lazy="selectin")
+    developer = orm.relationship("Developer", back_populates="impact_signals", lazy="selectin")
+    project = orm.relationship("Project", back_populates="impact_signals", lazy="selectin")
     alert = orm.relationship(
-        "Alert", back_populates="impact_signal", cascade="all, delete-orphan")
+        "Alert", back_populates="impact_signal", cascade="all, delete-orphan", lazy="selectin")
 
 
-class Subscription(SqlAlchemyBase, JsonSerializableMixin):
+class Subscription(SQLBase):
     __tablename__ = "subscriptions"
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -48,10 +47,10 @@ class Subscription(SqlAlchemyBase, JsonSerializableMixin):
 
     user = orm.relationship("User", back_populates="subscription")
     alert = orm.relationship(
-        "Alert", back_populates="subscription", cascade="all, delete-orphan")
+        "Alert", back_populates="subscription", cascade="all, delete-orphan", lazy="selectin")
 
 
-class Alert(SqlAlchemyBase, JsonSerializableMixin):
+class Alert(SQLBase):
     __tablename__ = "alerts"
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -64,5 +63,5 @@ class Alert(SqlAlchemyBase, JsonSerializableMixin):
     created_at = sqlalchemy.Column(
         sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
 
-    impact_signal = orm.relationship("ImpactSignal", back_populates="alert")
-    subscription = orm.relationship("Subscription", back_populates="alert")
+    impact_signal = orm.relationship("ImpactSignal", back_populates="alert", lazy="selectin")
+    subscription = orm.relationship("Subscription", back_populates="alert", lazy="selectin")
