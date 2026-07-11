@@ -1,12 +1,11 @@
+from database.models.__meta__ import SQLBase
+from sqlalchemy import orm
 import sqlalchemy
 import datetime
 import uuid
-from sqlalchemy import orm
-from . import SqlAlchemyBase
-from .json_mixin import JsonSerializableMixin
 
 
-class Project(SqlAlchemyBase, JsonSerializableMixin):
+class Project(SQLBase):
     __tablename__ = "projects"
 
     id = sqlalchemy.Column(
@@ -20,27 +19,27 @@ class Project(SqlAlchemyBase, JsonSerializableMixin):
     planned_rve_date = sqlalchemy.Column(sqlalchemy.Date)
     created_at = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
 
-    city = orm.relationship("City", back_populates="projects")
-    developer = orm.relationship("Developer", back_populates="projects")
+    city = orm.relationship("City", back_populates="projects", lazy="selectin")
+    developer = orm.relationship("Developer", back_populates="projects", lazy="selectin")
     impact_signals = orm.relationship(
-        "ImpactSignal", back_populates="project", cascade="all, delete-orphan")
+        "ImpactSignal", back_populates="project", cascade="all, delete-orphan", lazy="selectin")
 
 
-class City(SqlAlchemyBase, JsonSerializableMixin):
+class City(SQLBase):
     __tablename__ = "cities"
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
 
-    projects = orm.relationship("Project", back_populates="city")
+    projects = orm.relationship("Project", back_populates="city", lazy="selectin")
     impact_signals = orm.relationship(
-        "ImpactSignal", back_populates="city", cascade="all, delete-orphan")
+        "ImpactSignal", back_populates="city", cascade="all, delete-orphan", lazy="selectin")
 
 
-class Developer(SqlAlchemyBase, JsonSerializableMixin):
+class Developer(SQLBase):
     __tablename__ = "developers"
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
 
-    projects = orm.relationship("Project", back_populates="developer")
+    projects = orm.relationship("Project", back_populates="developer", lazy="selectin")
     impact_signals = orm.relationship(
-        "ImpactSignal", back_populates="developer", cascade="all, delete-orphan")
+        "ImpactSignal", back_populates="developer", cascade="all, delete-orphan", lazy="selectin")
