@@ -50,13 +50,21 @@
       document.getElementById("newsSearch").addEventListener("input", filterNewsFeed);
       document.getElementById("newsLevel").addEventListener("change", filterNewsFeed);
       document.getElementById("refreshFeed").addEventListener("click", async () => {
-        state.events = await window.api.getEvents();
-        const refreshedCounts = newsCounts(state.events);
-        document.getElementById("newsEventsCount").textContent = state.events.length;
-        document.getElementById("newsCriticalCount").textContent = refreshedCounts.critical;
-        document.getElementById("newsMediumCount").textContent = refreshedCounts.medium;
-        document.getElementById("feed").innerHTML = feedRows(state.events);
-        showToast("Лента обновлена");
+        const button = document.getElementById("refreshFeed");
+        button.disabled = true;
+        try {
+          state.events = await window.api.getEvents({ force: true });
+          const refreshedCounts = newsCounts(state.events);
+          document.getElementById("newsEventsCount").textContent = state.events.length;
+          document.getElementById("newsCriticalCount").textContent = refreshedCounts.critical;
+          document.getElementById("newsMediumCount").textContent = refreshedCounts.medium;
+          document.getElementById("feed").innerHTML = feedRows(state.events);
+          showToast("Лента обновлена");
+        } catch (error) {
+          showToast(`Не удалось обновить ленту: ${error.message}`);
+        } finally {
+          button.disabled = false;
+        }
       });
     } catch (error) {
       renderError(error);

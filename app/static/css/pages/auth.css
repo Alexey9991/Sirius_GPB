@@ -30,6 +30,10 @@
 
 .form-error { min-height: 16px; color: var(--red); font-size: 11px; font-weight: 750; }
 
+.auth-policy { display: flex; align-items: flex-start; gap: 9px; color: var(--muted); font-size: 12px; line-height: 1.4; cursor: pointer; }
+
+.auth-policy input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
+
 @media (max-width: 720px) {
 .form-row { grid-template-columns: 1fr; }
 
