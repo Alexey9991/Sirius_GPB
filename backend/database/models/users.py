@@ -2,7 +2,12 @@ from database.models.__meta__ import SQLBase
 from sqlalchemy import orm
 import sqlalchemy
 import datetime
+import bcrypt
 import uuid
+
+
+class AuthException(Exception):
+    ...
 
 
 class User(SQLBase):
@@ -20,11 +25,13 @@ class User(SQLBase):
     subscription = orm.relationship("Subscription", back_populates="user",
                                     cascade="all, delete-orphan", lazy="selectin")
 
-    # def set_password(self, password):
-    #     self.hashed_password = generate_password_hash(password)
+    def set_password(self, password: str):
+        self.hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-    # def check_password(self, password):
-    #     return check_password_hash(self.hashed_password, password)
+    def check_password(self, password: str) -> bool:
+        if not self.hashed_password:
+            return False
+        return bcrypt.checkpw(password.encode('utf-8'), self.hashed_password.encode('utf-8'))
 
 
 class Auth(SQLBase):
