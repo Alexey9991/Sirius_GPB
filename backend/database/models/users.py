@@ -22,7 +22,7 @@ class User(SQLBase):
     created_date = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
 
     auths = orm.relationship("Auth", back_populates="user", cascade="all, delete-orphan")
-    subscription = orm.relationship("Subscription", back_populates="user",
+    subscriptions = orm.relationship("Subscription", back_populates="user",
                                     cascade="all, delete-orphan", lazy="selectin")
 
     def set_password(self, password: str):

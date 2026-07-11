@@ -45,7 +45,7 @@ class Subscription(SQLBase):
     type = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     item_id = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 
-    user = orm.relationship("User", back_populates="subscription")
+    user = orm.relationship("User", back_populates="subscriptions")
     alert = orm.relationship(
         "Alert", back_populates="subscription", cascade="all, delete-orphan", lazy="selectin")
 
