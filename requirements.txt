@@ -1,9 +1,0 @@
-sqlalchemy
-pandas
-flask
-flask-cors
-requests
-beautifulsoup4
-werkzeug
-psycopg2-binary
-tqdm

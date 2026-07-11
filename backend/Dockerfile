@@ -1,23 +1,22 @@
-FROM dhi.io/python:3.12-dev AS builder
+FROM python:3.12-slim-bookworm AS base
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONFAULTHANDLER=1 \
+    PYTHONHASHSEED=random \
+    PYTHONUNBUFFERED=1
+
+ENV PATH="/root/.local/bin:$PATH"
+
+RUN pip3 install poetry
+
+WORKDIR /tmp
+COPY pyproject.toml poetry.lock /tmp/
+
+RUN poetry config virtualenvs.create false && poetry install --only main --no-root
+
+ENV PYTHONPATH /backend
 WORKDIR /backend
+COPY . .
 
-RUN python3 -m venv /venv
-ENV PATH="/venv/bin:$PATH"
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=bind,source=requirements.txt,target=/tmp/requirements.txt \
-    pip install -r /tmp/requirements.txt
-
-FROM dhi.io/python:3.12
-
-WORKDIR /backend
-
-COPY --from=builder /venv /venv
-ENV PATH="/venv/bin:$PATH"
-ENV PYTHONUNBUFFERED=1
-
-COPY backend/ .
-
-EXPOSE 8000
-
-CMD ["/venv/bin/python", "-u", "main.py"]
+FROM base AS debug
+CMD fastapi dev --entrypoint main:app --host 0.0.0.0 --port 8000
