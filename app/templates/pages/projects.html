@@ -1,0 +1,52 @@
+<template id="template-projects">
+  <div class="page-enter projects-page">
+    <section class="card">
+      <div class="toolbar project-toolbar">
+        <input id="projectSearch" class="input" placeholder="Название ЖК">
+        <select id="projectLevel" class="select">
+          <option value="ALL">Все риски</option>
+          <option value="RED">Критические</option>
+          <option value="YELLOW">Средние</option>
+          <option value="GREEN">Низкие</option>
+        </select>
+        <select id="projectSort" class="select">
+          <option value="name-asc">Объект: А-Я</option>
+          <option value="name-desc">Объект: Я-А</option>
+          <option value="city-asc">Город: А-Я</option>
+          <option value="city-desc">Город: Я-А</option>
+          <option value="developer-asc">Застройщик: А-Я</option>
+          <option value="developer-desc">Застройщик: Я-А</option>
+          <option value="risk-desc">Риск: критические сверху</option>
+          <option value="risk-asc">Риск: низкие сверху</option>
+          <option value="score-desc">Индекс: высокий сверху</option>
+          <option value="score-asc">Индекс: низкий сверху</option>
+          <option value="completion-desc">Готовность: высокая сверху</option>
+          <option value="completion-asc">Готовность: низкая сверху</option>
+          <option value="updated-desc">Обновлено: новые сверху</option>
+          <option value="updated-asc">Обновлено: старые сверху</option>
+        </select>
+      </div>
+      <div class="project-table" role="table" aria-label="Портфель объектов">
+        <div class="project-table-head" role="row">
+          <button role="columnheader" class="sort-button" data-sort-field="name">Объект</button>
+          <button role="columnheader" class="sort-button" data-sort-field="city">Город</button>
+          <button role="columnheader" class="sort-button" data-sort-field="developer">Застройщик</button>
+          <button role="columnheader" class="sort-button" data-sort-field="risk">Риск</button>
+          <button role="columnheader" class="sort-button" data-sort-field="score">Индекс</button>
+          <button role="columnheader" class="sort-button" data-sort-field="completion">Готовность</button>
+          <button role="columnheader" class="sort-button" data-sort-field="updated">Обновлено</button>
+        </div>
+        <div id="projectBody" class="project-table-body" role="rowgroup">
+          [[PROJECT_ROWS]]
+        </div>
+      </div>
+      <div class="project-load-more" hidden>
+        <button id="loadMoreProjects" class="secondary-btn" type="button">Загрузить ещё</button>
+      </div>
+      <div id="projectLoadStatus" class="project-load-status" hidden>
+        <span class="project-loading-spinner" aria-hidden="true"></span>
+        <span>Загружаем объекты…</span>
+      </div>
+    </section>
+  </div>
+</template>

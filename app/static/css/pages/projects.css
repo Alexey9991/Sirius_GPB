@@ -1,0 +1,202 @@
+/* Projects page styles. */
+
+.table-wrap { overflow-x: auto; }
+
+.progress { min-width: 110px; }
+
+.progress-line { height: 6px; margin-top: 5px; border-radius: 99px; background: #e7ebf0; }
+
+.progress-line span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+
+.bar,
+.confidence > div,
+.progress-line {
+  height: 6px;
+  background: #e1e7ee;
+}
+
+.progress-line span,
+.confidence i {
+  background: #008578;
+}
+
+.subscribe-project-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.project-toolbar .select {
+  min-width: 190px;
+}
+
+.sort-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sort-button:hover {
+  color: #0057a8;
+}
+
+@media (max-width: 720px) {
+.project-toolbar .select {
+    min-width: 100%;
+  }
+
+.subscribe-project-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+.table-wrap {
+    overflow-x: auto;
+  }
+
+.table-wrap table {
+    min-width: 760px;
+  }
+}
+
+/* Project table layout. */
+
+.projects-page .card {
+  margin-bottom: 0;
+}
+
+.project-table {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.project-table-head,
+.project-table-row {
+  min-width: 920px;
+  display: grid;
+  grid-template-columns: minmax(210px, 1.35fr) minmax(130px, .75fr) minmax(170px, 1fr) 120px 92px 130px 138px;
+  align-items: center;
+}
+
+.project-table-head {
+  background: #f6f8fa;
+  border-bottom: 1px solid var(--line);
+}
+
+.project-table-head .sort-button {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: #5d6874;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.project-table-body {
+  display: grid;
+}
+
+.project-table-row {
+  border: 0;
+  border-bottom: 1px solid #edf0f4;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-table-row:last-child {
+  border-bottom: 0;
+}
+
+.project-table-row:hover {
+  background: #f7faff;
+}
+
+.project-table-row > span {
+  min-width: 0;
+  padding: 13px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.project-table-row .project-name-cell {
+  color: var(--ink);
+  font-weight: 850;
+}
+
+.project-table-row .progress {
+  min-width: 0;
+}
+
+.project-table-row .progress-line {
+  width: 100%;
+  min-width: 84px;
+}
+
+.project-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 2px;
+}
+
+.project-load-more[hidden] {
+  display: none;
+}
+
+.project-load-more .secondary-btn {
+  min-width: 180px;
+}
+
+.project-load-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px 0 2px;
+  color: #5d6874;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.project-load-status[hidden] {
+  display: none;
+}
+
+.project-loading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #dbe3ec;
+  border-top-color: #0057a8;
+  border-radius: 50%;
+  animation: project-spin .75s linear infinite;
+}
+
+@keyframes project-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .project-table-head,
+  .project-table-row {
+    min-width: 900px;
+    grid-template-columns: 190px 120px 155px 110px 86px 120px 120px;
+  }
+}
