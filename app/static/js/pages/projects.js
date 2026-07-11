@@ -81,15 +81,24 @@
       body: document.getElementById("projectBody"),
       loadMoreWrap: document.querySelector(".project-load-more"),
       loadMoreButton: document.getElementById("loadMoreProjects"),
+      loadStatus: document.getElementById("projectLoadStatus"),
     };
   }
 
   function setLoadMoreState(visible, busy = false) {
-    const { loadMoreWrap, loadMoreButton } = projectControls();
+    const { loadMoreWrap, loadMoreButton, loadStatus } = projectControls();
     if (!loadMoreWrap || !loadMoreButton) return;
     loadMoreWrap.hidden = !visible;
     loadMoreButton.disabled = busy;
     loadMoreButton.textContent = busy ? "Загружаем…" : "Загрузить ещё";
+    if (visible && loadStatus) loadStatus.hidden = true;
+  }
+
+  function setScrollLoadingState(visible) {
+    const { loadStatus, loadMoreWrap } = projectControls();
+    if (!loadStatus) return;
+    loadStatus.hidden = !visible;
+    if (visible && loadMoreWrap) loadMoreWrap.hidden = true;
   }
 
   function renderProjectRows() {
@@ -109,6 +118,8 @@
   async function fetchProjects({ reset = false, fromButton = false } = {}) {
     if (projectLoading) return;
     projectLoading = true;
+    const showScrollLoader = !reset && !fromButton && !projectAutoPaused;
+    setScrollLoadingState(showScrollLoader);
     if (fromButton || projectAutoPaused) setLoadMoreState(true, true);
 
     const previousLength = reset ? 0 : (state.projects || []).length;
@@ -127,6 +138,7 @@
         showToast(error.message || "Не удалось загрузить следующую порцию");
       }
     } finally {
+      setScrollLoadingState(false);
       projectLoading = false;
     }
   }
@@ -156,6 +168,7 @@
     projectAutoPaused = false;
     syncProjectLimitToUrl();
     setLoadMoreState(false);
+    setScrollLoadingState(false);
   }
 
   async function renderProjects() {
@@ -193,6 +206,7 @@
       }));
 
       setLoadMoreState(false);
+      setScrollLoadingState(false);
       attachProjectScroll();
     } catch (error) {
       renderError(error);
