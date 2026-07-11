@@ -1,13 +1,17 @@
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 from sqlalchemy import select, func
-from fastapi import FastAPI, Depends, HTTPException
+from datetime import datetime
 from typing import Annotated
 
 from config.settings import settings
 from database.engine import get_session
-from database import TABLES
+from schemas import sign_schema
+from database import *
 
+
+# /// setup API ///
 
 app = FastAPI()
 
@@ -19,25 +23,106 @@ async def health() -> str:
         raise HTTPException(500, {"status": "error", "error": str(e)})
 
 
+# /// get_base_information from tables ///
+
+def table_is_valid(table_name: str) -> bool:
+    if table_name in settings.FORBIDDEN_TABLES:
+        raise HTTPException(403, f'This table "{table_name}" is forbidden in API')
+    if table_name not in TABLES.keys():
+        raise HTTPException(404, f'The "{table_name}" table was not found.')
+    return True
+
+
 @app.get("/api/get/{table}")
 async def get_user(table: str, db_sess: Annotated[AsyncSession, Depends(get_session)], limit: int=30):
-    if table in settings.FORBIDDEN_TABLES:
-        raise HTTPException(403, {"error": f'This table "{table}" is forbidden in API'})
-    table = TABLES[table]
-    stmt = select(table).limit(limit)
-    result = await db_sess.execute(stmt)
-    return result.scalars().all()
+    table_is_valid(table)
+    stmt = select(TABLES[table]).limit(limit)
+    result = (await db_sess.execute(stmt)).scalars()
+    return result.all()
 
 
 @app.get("/api/search/{table}")
-async def search(table: str, q: str, stype: str, db_sess: Annotated[AsyncSession, Depends(get_session)], limit: int=30):
+async def search(table: str, q: str, stype: str,
+                 db_sess: Annotated[AsyncSession, Depends(get_session)], limit: int=30):
+    table_is_valid(table)
     if not q:
-        raise HTTPException(400, {"error": "Search query is required"})
+        raise HTTPException(400, "Search query is required")
     if not stype:
-        raise HTTPException(400, {"error": "Specific type is required"})
-    if table in settings.FORBIDDEN_TABLES:
-        raise HTTPException(403, {"error": f'This table "{table}" is forbidden in API'})
+        raise HTTPException(400, "Specific type is required")
     stmt = select(TABLES[table]).filter(func.lower(
         getattr(TABLES[table], stype)).contains(q.lower())).limit(limit)
-    result = await db_sess.execute(stmt)
-    return result.scalars().all()
+    result = (await db_sess.execute(stmt)).scalars()
+    return result.all()
+
+
+# /// authentication ///
+
+async def get_auth_session(request: Request, db_sess: Annotated[AsyncSession, Depends(get_session)]) -> Auth:
+    dnow = datetime.datetime.now()
+    session_token = request.cookies.get("session_token")
+    if not session_token:
+        raise HTTPException(401, "Authentication required")
+
+    stmt = select(Auth).filter(Auth.session_token == session_token)
+    auth = (await db_sess.execute(stmt)).scalars().first()
+
+    if not auth:
+        raise HTTPException(401, "Authentication was not found")
+    elif request.headers.get("user-agent") != auth.user_agent and auth.user_agent is not None:
+        raise HTTPException(403, "user_agent != Auth.user_agent")
+    elif auth.logout_at is not None and dnow > auth.logout_at:
+        raise HTTPException(401, "The session was completed.")
+
+    auth.last_activity = dnow
+    await db_sess.commit()
+    return auth
+
+
+@app.post("/api/sign/{form_type}")
+async def sign(form_type: str, data: dict, request: Request,
+               db_sess: Annotated[AsyncSession, Depends(get_session)]):
+    if form_type == "login":
+        login_data = sign_schema.LoginRequest(**data)
+        stmt = select(User).filter(User.name == login_data.username)
+        user = (await db_sess.execute(stmt)).scalars().first()
+        if not (user and user.check_password(login_data.password)):
+            raise HTTPException(403, "Неверное имя пользователя или пароль")
+
+    elif form_type == "register":
+        register_data = sign_schema.RegisterRequest(**data)
+        if not register_data.policy_check:
+            raise HTTPException(403, "Подтвердите соглашение с условиями использования!")
+        if register_data.password != register_data.password_again:
+            raise HTTPException(409, "Введённые пароли не совпадают!")
+        stmt = select(User).filter(User.name == register_data.username)
+        if (await db_sess.execute(stmt)).scalars().first():
+            raise HTTPException(409, "Такой пользователь уже существует.")
+        user = User(name=register_data.username)
+        user.set_password(register_data.password)
+        db_sess.add(user)
+
+    else:
+        raise HTTPException(400, f"Unknown type of form: {form_type}")
+
+    auth = Auth(user_id=user.id, user_agent=request.headers.get("user-agent"))
+    db_sess.add(auth)
+    await db_sess.commit()
+    await db_sess.refresh(auth)
+    response = Response(status_code=303)
+    response.set_cookie(
+        key="session_token", value=auth.session_token, httponly=True,
+        samesite="lax", max_age=60 * 60 * 24 * 30, secure=True)
+    return response
+
+
+@app.get("/api/logout")
+async def logout(auth: Annotated[Auth, Depends(get_auth_session)],
+                 db_sess: Annotated[AsyncSession, Depends(get_session)]):
+    auth.logout_at = auth.last_activity
+    await db_sess.commit()
+    return "Successful exit."
+
+
+@app.get("/api/who_am_i")
+def who_am_i(auth: Annotated[Auth, Depends(get_auth_session)]):
+    return auth
