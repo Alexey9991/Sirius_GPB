@@ -1,13 +1,11 @@
+from database.models.__meta__ import SQLBase
 from sqlalchemy import orm
 import sqlalchemy
 import datetime
 import uuid
 
-from . import SqlAlchemyBase
-from .json_mixin import JsonSerializableMixin
 
-
-class ParseNews(SqlAlchemyBase, JsonSerializableMixin):
+class ParseNews(SQLBase):
     __tablename__ = "parse_news"
 
     id = sqlalchemy.Column(
@@ -19,11 +17,11 @@ class ParseNews(SqlAlchemyBase, JsonSerializableMixin):
         sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
 
     news = orm.relationship(
-        "News", back_populates="parse_news",
-        cascade="all, delete-orphan", uselist=False)
+        "News", back_populates="parse_news", uselist=False,
+        cascade="all, delete-orphan", lazy="selectin")
 
 
-class News(SqlAlchemyBase, JsonSerializableMixin):
+class News(SQLBase):
     __tablename__ = "news"
 
     id = sqlalchemy.Column(
@@ -37,6 +35,8 @@ class News(SqlAlchemyBase, JsonSerializableMixin):
     created_at = sqlalchemy.Column(
         sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
 
-    parse_news = orm.relationship("ParseNews", back_populates="news", uselist=False)
+    parse_news = orm.relationship(
+        "ParseNews", back_populates="news", uselist=False, lazy="selectin")
     impact_signal = orm.relationship(
-        "ImpactSignal", back_populates="news", cascade="all, delete-orphan")
+        "ImpactSignal", back_populates="news",
+        cascade="all, delete-orphan", lazy="selectin")

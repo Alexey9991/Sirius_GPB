@@ -1,14 +1,11 @@
-from werkzeug.security import generate_password_hash, check_password_hash
+from database.models.__meta__ import SQLBase
 from sqlalchemy import orm
 import sqlalchemy
 import datetime
 import uuid
 
-from . import SqlAlchemyBase
-from .json_mixin import JsonSerializableMixin
 
-
-class User(SqlAlchemyBase, JsonSerializableMixin):
+class User(SQLBase):
     __tablename__ = "users"
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -20,16 +17,17 @@ class User(SqlAlchemyBase, JsonSerializableMixin):
     created_date = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
 
     auths = orm.relationship("Auth", back_populates="user", cascade="all, delete-orphan")
-    subscription = orm.relationship("Subscription", back_populates="user", cascade="all, delete-orphan")
+    subscription = orm.relationship("Subscription", back_populates="user",
+                                    cascade="all, delete-orphan", lazy="selectin")
 
-    def set_password(self, password):
-        self.hashed_password = generate_password_hash(password)
+    # def set_password(self, password):
+    #     self.hashed_password = generate_password_hash(password)
 
-    def check_password(self, password):
-        return check_password_hash(self.hashed_password, password)
+    # def check_password(self, password):
+    #     return check_password_hash(self.hashed_password, password)
 
 
-class Auth(SqlAlchemyBase, JsonSerializableMixin):
+class Auth(SQLBase):
     __tablename__ = "authentications"
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -40,4 +38,4 @@ class Auth(SqlAlchemyBase, JsonSerializableMixin):
     logout_at = sqlalchemy.Column(sqlalchemy.DateTime)
 
     user_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("users.id"))
-    user = orm.relationship("User", back_populates="auths")
+    user = orm.relationship("User", back_populates="auths", lazy="selectin")
