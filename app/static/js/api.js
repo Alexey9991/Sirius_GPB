@@ -2,8 +2,8 @@
  * Frontend API adapter for the current backend.
  *
  * The backend exposes generic table endpoints:
- *   GET /api/get/<table>
- *   GET /api/search/<table>?stype=<field>&q=<query>
+ *   GET /api/data/get/<table>
+ *   GET /api/data/search/<table>?stype=<field>&q=<query>
  *
  * Page components still consume a richer UI contract, so this file maps real
  * backend rows into projects, events, alerts and object analysis objects.
@@ -42,7 +42,7 @@
   }
 
   function activeUserId() {
-    return localStorage.getItem("risk-intelligence:active-user-id") || "u-001";
+    return localStorage.getItem("risk-intelligence:active-user-id") || "guest";
   }
 
   function accountKey(key) {
@@ -121,12 +121,26 @@
 
   function tableUrl(table, params = {}) {
     const query = new URLSearchParams(params);
-    return `${apiBaseUrl()}/get/${encodeURIComponent(table)}${query.size ? `?${query}` : ""}`;
+    return `${apiBaseUrl()}/data/get/${encodeURIComponent(table)}${query.size ? `?${query}` : ""}`;
   }
 
   function searchUrl(table, params = {}) {
     const query = new URLSearchParams(params);
-    return `${apiBaseUrl()}/search/${encodeURIComponent(table)}?${query}`;
+    return `${apiBaseUrl()}/data/search/${encodeURIComponent(table)}?${query}`;
+  }
+
+  function accountUrl(path = "") {
+    const suffix = String(path).replace(/^\/+/, "");
+    return `${apiBaseUrl()}/account/${suffix}`;
+  }
+
+  function apiErrorMessage(payload, fallback) {
+    const detail = payload && typeof payload === "object" ? payload.detail || payload.message : payload;
+    if (Array.isArray(detail)) {
+      return detail.map((item) => item?.msg || item?.message || String(item)).join("; ");
+    }
+    if (detail && typeof detail === "object") return detail.error || detail.status || JSON.stringify(detail);
+    return normalizeText(detail || fallback, fallback);
   }
 
   async function request(url, options = {}) {
@@ -150,10 +164,7 @@
         ? await response.json().catch(() => null)
         : await response.text();
       if (!response.ok) {
-        const detail = payload && typeof payload === "object"
-          ? payload.detail || payload.message || JSON.stringify(payload)
-          : payload;
-        const error = new Error(detail || response.statusText || `API ${response.status}`);
+        const error = new Error(apiErrorMessage(payload, response.statusText || `API ${response.status}`));
         error.status = response.status;
         error.payload = payload;
         throw error;
@@ -328,20 +339,6 @@
     });
   }
 
-  function estimateCompletion(project) {
-    if (project.completion !== undefined) return clamp(project.completion);
-    const planned = project.planned_rve_date ? new Date(project.planned_rve_date) : null;
-    const created = project.created_at ? new Date(project.created_at) : null;
-    if (!planned || Number.isNaN(planned.getTime())) return 0;
-    if (planned <= new Date()) return 100;
-    const start = created && !Number.isNaN(created.getTime())
-      ? created
-      : new Date(planned.getFullYear() - 2, planned.getMonth(), planned.getDate());
-    const total = planned - start;
-    const elapsed = Date.now() - start.getTime();
-    return total > 0 ? clamp(Math.round((elapsed / total) * 100)) : 0;
-  }
-
   function latestProjectDate(project, events) {
     const dates = events.map((event) => new Date(event.published_at).getTime()).filter(Number.isFinite);
     if (project.created_at) dates.push(new Date(project.created_at).getTime());
@@ -360,7 +357,6 @@
       developer: relationName(project, "developer", "developer_name") || "Не указан",
       score,
       level: riskLevelFromScore(score),
-      completion: estimateCompletion(project),
       created_at: normalizeDate(project.created_at),
       updated_at: latestProjectDate(project, related),
       planned_rve_date: project.planned_rve_date || null,
@@ -435,7 +431,6 @@
         developer: normalizeText(projectInput?.developer, "Не указан"),
         score: 0,
         level: "GREEN",
-        completion: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -599,6 +594,15 @@
     return normalizedEvents(options);
   }
 
+  async function getFeed(table = "impact_signals", options = {}) {
+    if (table === "news") {
+      const rows = await backendNews(options);
+      return sortByDateDesc(rows.map(normalizeNews)).slice(0, normalizeLimit(options.limit));
+    }
+    const rows = await backendSignals(options);
+    return sortByDateDesc(rows.map(normalizeSignal)).slice(0, normalizeLimit(options.limit));
+  }
+
   async function getAlerts(level = "ALL") {
     const events = await normalizedEvents();
     return events.filter((event) => event.level !== "GREEN" && (level === "ALL" || event.level === level));
@@ -620,12 +624,12 @@
   }
 
   async function whoAmI() {
-    const payload = await request(`${apiBaseUrl()}/who_am_i`);
+    const payload = await request(accountUrl());
     return normalizeAccount(payload);
   }
 
   async function login(credentials) {
-    await request(`${apiBaseUrl()}/sign/login`, {
+    await request(accountUrl("sign/login"), {
       method: "POST",
       body: JSON.stringify({
         username: normalizeText(credentials.username || credentials.email),
@@ -636,10 +640,13 @@
   }
 
   async function register(profile) {
-    await request(`${apiBaseUrl()}/sign/register`, {
+    await request(accountUrl("sign/register"), {
       method: "POST",
       body: JSON.stringify({
         username: normalizeText(profile.username || profile.email || profile.name),
+        email: normalizeText(profile.email),
+        role: normalizeText(profile.role),
+        division: normalizeText(profile.division || profile.department),
         password: String(profile.password || ""),
         password_again: String(profile.passwordAgain || profile.password_again || ""),
         policy_check: Boolean(profile.policyCheck || profile.policy_check),
@@ -649,7 +656,46 @@
   }
 
   async function logout() {
-    return request(`${apiBaseUrl()}/logout`);
+    return request(accountUrl("logout"), { method: "DELETE" });
+  }
+
+  async function updateProfile(profile) {
+    await request(accountUrl("edit"), {
+      method: "POST",
+      body: JSON.stringify({
+        username: normalizeText(profile.username || profile.name),
+        email: normalizeText(profile.email),
+        role: normalizeText(profile.role),
+        division: normalizeText(profile.division || profile.department),
+        password: String(profile.password || ""),
+        password_again: String(profile.passwordAgain || profile.password_again || profile.password || ""),
+        policy_check: true,
+      }),
+    });
+    return { user: await whoAmI() };
+  }
+
+  async function deleteAccount() {
+    return request(accountUrl(), { method: "DELETE" });
+  }
+
+  async function clearAlerts() {
+    return request(`${apiBaseUrl()}/data/alerts`, { method: "DELETE" });
+  }
+
+  async function searchSite(query, limit = DEFAULT_LIMIT) {
+    const normalizedQuery = normalizeText(query);
+    if (!normalizedQuery) return { projects: [], news: [], signals: [] };
+    const [projects, news, signals] = await Promise.all([
+      searchTable("projects", "name", normalizedQuery, limit),
+      searchTable("news", "title", normalizedQuery, limit),
+      searchTable("impact_signals", "risk_category", normalizedQuery, limit),
+    ]);
+    return {
+      projects: projects.map((project) => normalizeProject(project)),
+      news: sortByDateDesc(news.map(normalizeNews)),
+      signals: sortByDateDesc(signals.map(normalizeSignal)),
+    };
   }
 
   window.api = {
@@ -658,6 +704,7 @@
     getAlerts,
     getProjects,
     getEvents,
+    getFeed,
     explainImpact,
     getAnalysisHistory,
     getRiskChanges,
@@ -666,6 +713,14 @@
     login,
     register,
     logout,
+    updateProfile,
+    deleteAccount,
+    clearAlerts,
+    searchSite,
+    getCities: (limit = DEFAULT_LIMIT) => getTable("cities", limit),
+    getDevelopers: (limit = DEFAULT_LIMIT) => getTable("developers", limit),
+    getSubscriptions: (limit = DEFAULT_LIMIT) => getTable("subscriptions", limit),
+    getBackendAlerts: (limit = DEFAULT_LIMIT) => getTable("alerts", limit),
     searchProjectsByName: (query, limit = DEFAULT_LIMIT) => normalizedProjects({ query, limit, force: true }),
   };
 })();
