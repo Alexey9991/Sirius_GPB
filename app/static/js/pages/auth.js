@@ -30,6 +30,9 @@ function renderRegister() {
       try {
         const result = await window.api.register({
           username: document.getElementById("registerUsername").value.trim(),
+          email: document.getElementById("registerEmail").value.trim(),
+          role: document.getElementById("registerRole").value.trim(),
+          division: document.getElementById("registerDivision").value.trim(),
           password,
           passwordAgain: document.getElementById("registerConfirm").value,
           policyCheck: document.getElementById("registerPolicy").checked,
