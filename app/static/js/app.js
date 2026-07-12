@@ -278,7 +278,9 @@
       showToast("Вы вышли из системы");
       navigate("login");
     } else if (actionTarget?.dataset.action === "edit-profile") {
-      showToast("Редактирование профиля будет подключено к backend");
+      ctx.openProfileEditor?.();
+    } else if (actionTarget?.dataset.action === "close-profile-editor") {
+      ctx.closeProfileEditor?.();
     }
   });
   document.addEventListener("keydown", (event) => {

@@ -39,6 +39,38 @@
 
 .profile-summary .profile-actions .secondary-btn { flex: 1 1 130px; min-width: 0; }
 
+.profile-edit-dialog {
+  width: min(680px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(25, 38, 52, .22);
+}
+
+.profile-edit-dialog::backdrop { background: rgba(25, 38, 52, .42); }
+
+.profile-edit-dialog form { padding: 24px; }
+
+.profile-edit-head,
+.profile-edit-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.profile-edit-head h2 { margin: 4px 0 0; font-size: 21px; }
+
+.icon-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.profile-edit-actions { justify-content: flex-end; margin-top: 4px; }
+
 @media (max-width: 1100px) {
 .dashboard-grid, .monitor-grid, .news-layout, .ai-workspace, .notification-layout, .profile-grid, .history-grid { grid-template-columns: 1fr; }
 }

@@ -8,7 +8,7 @@
   } = ctx;
 
 function isSubscribed(item) {
-    const subscriptions = state.subscriptions || defaultSubscriptions;
+    const subscriptions = state.subscriptions || { locations: [], developers: [], projects: [] };
     const project = item.city && item.developer ? item : projectByName(item.project_name || item.name);
     return subscriptions.projects.includes(item.project_name || item.name)
       || (project && subscriptions.locations.includes(project.city))
@@ -88,11 +88,16 @@ async function markOverlayNotificationsRead() {
   }
 
 async function clearOverlayNotifications() {
-    state.notifications = [];
-    state.notificationsInitialized = true;
-    updateNotificationBadge();
-    await openNotificationOverlay();
-    showToast("Уведомления удалены");
+    try {
+      if (state.currentUser) await window.api.clearAlerts();
+      state.notifications = [];
+      state.notificationsInitialized = true;
+      updateNotificationBadge();
+      await openNotificationOverlay();
+      showToast("Уведомления удалены");
+    } catch (error) {
+      showToast(`Не удалось удалить уведомления: ${error.message}`);
+    }
   }
 
 function showBrowserNotification(item) {

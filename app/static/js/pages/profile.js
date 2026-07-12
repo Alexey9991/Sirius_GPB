@@ -108,12 +108,51 @@ async function renderProfile() {
       USER_ROLE: esc(user.role),
       USER_EMAIL: esc(user.email || "Не указан"),
       USER_DEPARTMENT: esc(user.department || "Не указано"),
+      EDIT_USER_NAME: esc(user.name),
+      EDIT_USER_EMAIL: esc(user.email || ""),
+      EDIT_USER_ROLE: esc(user.role || ""),
+      EDIT_USER_DEPARTMENT: esc(user.department || ""),
       LOCATION_CHECKBOXES: subscriptionCheckboxes("locations", locations),
       DEVELOPER_CHECKBOXES: subscriptionCheckboxes("developers", developers),
       PROJECT_CHECKBOXES: subscriptionCheckboxes("projects", projectNames),
       ACCOUNT_HISTORY_ROWS: ctx.analysisHistoryRows?.(state.analysisHistory.slice(0, 5)) || emptyHtml("У этого аккаунта пока нет сохранённых анализов."),
     });
     document.querySelectorAll("[data-subscription]").forEach((input) => input.addEventListener("change", () => updateSubscription(input)));
+    const editDialog = document.getElementById("profileEditDialog");
+    const editForm = document.getElementById("profileEditForm");
+    ctx.openProfileEditor = () => editDialog?.showModal();
+    ctx.closeProfileEditor = () => editDialog?.close();
+    editForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const errorBox = document.getElementById("profileEditError");
+      const password = document.getElementById("profileEditPassword").value;
+      const passwordAgain = document.getElementById("profileEditConfirm").value;
+      if (password !== passwordAgain) {
+        errorBox.textContent = "Пароли не совпадают";
+        return;
+      }
+      const button = document.getElementById("profileEditSubmit");
+      button.disabled = true;
+      button.textContent = "Сохраняем…";
+      try {
+        const result = await window.api.updateProfile({
+          username: document.getElementById("profileEditUsername").value.trim(),
+          email: document.getElementById("profileEditEmail").value.trim(),
+          role: document.getElementById("profileEditRole").value.trim(),
+          division: document.getElementById("profileEditDivision").value.trim(),
+          password,
+          passwordAgain,
+        });
+        setCurrentUser(result.user);
+        showToast("Профиль обновлён");
+        editDialog.close();
+        renderProfile();
+      } catch (error) {
+        errorBox.textContent = error.message;
+        button.disabled = false;
+        button.textContent = "Сохранить";
+      }
+    });
   }
 
   ctx.toggleProjectSubscription = toggleProjectSubscription;

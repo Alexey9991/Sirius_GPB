@@ -43,5 +43,28 @@
         </section>
       </div>
     </div>
+    <dialog id="profileEditDialog" class="profile-edit-dialog">
+      <form id="profileEditForm" class="form-stack" method="dialog">
+        <div class="profile-edit-head">
+          <div><span class="eyebrow">Данные аккаунта</span><h2>Редактировать профиль</h2></div>
+          <button class="icon-close" type="button" data-action="close-profile-editor" aria-label="Закрыть">×</button>
+        </div>
+        <div class="field"><label for="profileEditUsername">ФИО или имя пользователя</label><input id="profileEditUsername" class="input" maxlength="100" value="[[EDIT_USER_NAME]]" required></div>
+        <div class="field"><label for="profileEditEmail">Корпоративная почта</label><input id="profileEditEmail" class="input" type="email" maxlength="100" value="[[EDIT_USER_EMAIL]]"></div>
+        <div class="form-row">
+          <div class="field"><label for="profileEditRole">Роль</label><input id="profileEditRole" class="input" maxlength="100" value="[[EDIT_USER_ROLE]]"></div>
+          <div class="field"><label for="profileEditDivision">Подразделение</label><input id="profileEditDivision" class="input" maxlength="100" value="[[EDIT_USER_DEPARTMENT]]"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label for="profileEditPassword">Пароль для подтверждения</label><input id="profileEditPassword" class="input" type="password" autocomplete="current-password" minlength="6" maxlength="100" required></div>
+          <div class="field"><label for="profileEditConfirm">Повторите пароль</label><input id="profileEditConfirm" class="input" type="password" autocomplete="current-password" minlength="6" maxlength="100" required></div>
+        </div>
+        <div id="profileEditError" class="form-error"></div>
+        <div class="profile-edit-actions">
+          <button class="secondary-btn" type="button" data-action="close-profile-editor">Отмена</button>
+          <button id="profileEditSubmit" class="primary-btn" type="submit">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
   </div>
 </template>

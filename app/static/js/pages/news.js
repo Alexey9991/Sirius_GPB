@@ -36,10 +36,25 @@
     };
   }
 
+  async function loadSelectedFeed({ force = false } = {}) {
+    const table = state.newsTable || "impact_signals";
+    state.events = await window.api.getFeed(table, { force, limit: 30 });
+    return state.events;
+  }
+
+  function updateNewsView() {
+    const counts = newsCounts(state.events);
+    document.getElementById("newsEventsCount").textContent = state.events.length;
+    document.getElementById("newsCriticalCount").textContent = counts.critical;
+    document.getElementById("newsMediumCount").textContent = counts.medium;
+    filterNewsFeed();
+  }
+
   async function renderNewsFeed() {
     loading();
     try {
-      state.events = await window.api.getEvents();
+      state.newsTable ||= "impact_signals";
+      await loadSelectedFeed();
       const counts = newsCounts(state.events);
       app.innerHTML = pageHtml("news", {
         EVENTS_COUNT: state.events.length,
@@ -49,16 +64,26 @@
       });
       document.getElementById("newsSearch").addEventListener("input", filterNewsFeed);
       document.getElementById("newsLevel").addEventListener("change", filterNewsFeed);
+      const tableSelect = document.getElementById("newsTable");
+      tableSelect.value = state.newsTable;
+      tableSelect.addEventListener("change", async () => {
+        state.newsTable = tableSelect.value;
+        tableSelect.disabled = true;
+        try {
+          await loadSelectedFeed({ force: true });
+          updateNewsView();
+        } catch (error) {
+          showToast(`Не удалось загрузить ${state.newsTable}: ${error.message}`);
+        } finally {
+          tableSelect.disabled = false;
+        }
+      });
       document.getElementById("refreshFeed").addEventListener("click", async () => {
         const button = document.getElementById("refreshFeed");
         button.disabled = true;
         try {
-          state.events = await window.api.getEvents({ force: true });
-          const refreshedCounts = newsCounts(state.events);
-          document.getElementById("newsEventsCount").textContent = state.events.length;
-          document.getElementById("newsCriticalCount").textContent = refreshedCounts.critical;
-          document.getElementById("newsMediumCount").textContent = refreshedCounts.medium;
-          document.getElementById("feed").innerHTML = feedRows(state.events);
+          await loadSelectedFeed({ force: true });
+          updateNewsView();
           showToast("Лента обновлена");
         } catch (error) {
           showToast(`Не удалось обновить ленту: ${error.message}`);
