@@ -6,7 +6,7 @@
 
 .progress-line { height: 6px; margin-top: 5px; border-radius: 99px; background: #e7ebf0; }
 
-.progress-line span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+.progress-line span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #ef6258, var(--red)); }
 
 .bar,
 .confidence > div,
@@ -15,10 +15,9 @@
   background: #e1e7ee;
 }
 
-.progress-line span,
-.confidence i {
-  background: #008578;
-}
+.progress-line span { background: linear-gradient(90deg, #ef6258, var(--red)); }
+
+.confidence i { background: #008578; }
 
 .subscribe-project-btn {
   min-height: 34px;
@@ -82,7 +81,7 @@
 .project-table-row {
   min-width: 920px;
   display: grid;
-  grid-template-columns: minmax(210px, 1.35fr) minmax(130px, .75fr) minmax(170px, 1fr) 120px 92px 130px 138px;
+  grid-template-columns: minmax(210px, 1.35fr) minmax(130px, .75fr) minmax(170px, 1fr) 120px 150px 138px;
   align-items: center;
 }
 
@@ -197,6 +196,6 @@
   .project-table-head,
   .project-table-row {
     min-width: 900px;
-    grid-template-columns: 190px 120px 155px 110px 86px 120px 120px;
+    grid-template-columns: 190px 120px 155px 110px 140px 120px;
   }
 }

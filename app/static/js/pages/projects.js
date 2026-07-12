@@ -30,9 +30,6 @@
     if (state.projectSort.startsWith("score")) {
       return sorted.sort((a, b) => direction * (a.score - b.score) || a.name.localeCompare(b.name, "ru"));
     }
-    if (state.projectSort.startsWith("completion")) {
-      return sorted.sort((a, b) => direction * (a.completion - b.completion) || a.name.localeCompare(b.name, "ru"));
-    }
     if (state.projectSort.startsWith("updated")) {
       return sorted.sort((a, b) => direction * (new Date(a.created_at || a.updated_at) - new Date(b.created_at || b.updated_at)) || a.name.localeCompare(b.name, "ru"));
     }
@@ -55,7 +52,6 @@
       DEVELOPER: esc(p.developer),
       CHIP: chip(p.level),
       SCORE: p.score,
-      COMPLETION: p.completion,
       UPDATED: dateTime(p.created_at || p.updated_at),
     })).join("");
   }
