@@ -1,6 +1,6 @@
 from database.models.__meta__ import SQLBase
 from sqlalchemy import orm
-import sqlalchemy
+import sqlalchemy as sql
 import datetime
 import uuid
 
@@ -8,16 +8,15 @@ import uuid
 class Project(SQLBase):
     __tablename__ = "projects"
 
-    id = sqlalchemy.Column(
-        sqlalchemy.String, primary_key=True, unique=True,
+    id = sql.Column(
+        sql.String, primary_key=True, unique=True,
         nullable=False, default=lambda: uuid.uuid4().hex)
-    name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    developer_id = sqlalchemy.Column(
-        sqlalchemy.Integer, sqlalchemy.ForeignKey("developers.id", ondelete="SET NULL"))
-    city_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey(
+    name = sql.Column(sql.String, nullable=False)
+    developer_id = sql.Column(
+        sql.Integer, sql.ForeignKey("developers.id", ondelete="SET NULL"))
+    city_id = sql.Column(sql.Integer, sql.ForeignKey(
         "cities.id", ondelete="SET NULL"))
-    planned_rve_date = sqlalchemy.Column(sqlalchemy.Date)
-    created_at = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
+    created_at = sql.Column(sql.DateTime, default=datetime.datetime.now, nullable=False)
 
     city = orm.relationship("City", back_populates="projects", lazy="selectin")
     developer = orm.relationship("Developer", back_populates="projects", lazy="selectin")
@@ -27,8 +26,8 @@ class Project(SQLBase):
 
 class City(SQLBase):
     __tablename__ = "cities"
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    name = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
+    id = sql.Column(sql.Integer, primary_key=True, autoincrement=True)
+    name = sql.Column(sql.String, nullable=False, unique=True)
 
     projects = orm.relationship("Project", back_populates="city", lazy="selectin")
     impact_signals = orm.relationship(
@@ -37,8 +36,8 @@ class City(SQLBase):
 
 class Developer(SQLBase):
     __tablename__ = "developers"
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    name = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
+    id = sql.Column(sql.Integer, primary_key=True, autoincrement=True)
+    name = sql.Column(sql.String, nullable=False, unique=True)
 
     projects = orm.relationship("Project", back_populates="developer", lazy="selectin")
     impact_signals = orm.relationship(

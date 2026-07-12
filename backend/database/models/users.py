@@ -1,6 +1,6 @@
 from database.models.__meta__ import SQLBase
 from sqlalchemy import orm
-import sqlalchemy
+import sqlalchemy as sql
 import datetime
 import bcrypt
 import uuid
@@ -13,17 +13,18 @@ class AuthException(Exception):
 class User(SQLBase):
     __tablename__ = "users"
 
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    name = sqlalchemy.Column(sqlalchemy.String, index=True, unique=True)
-    email = sqlalchemy.Column(sqlalchemy.String, index=True, unique=True)
-    role = sqlalchemy.Column(sqlalchemy.String)
-    division = sqlalchemy.Column(sqlalchemy.String)
-    hashed_password = sqlalchemy.Column(sqlalchemy.String)
-    created_date = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
+    id = sql.Column(sql.Integer, primary_key=True, autoincrement=True, nullable=False)
+    name = sql.Column(sql.String, index=True, unique=True, nullable=False)
+    email = sql.Column(sql.String, index=True, unique=True)
+    role = sql.Column(sql.String)
+    division = sql.Column(sql.String)
+    hashed_password = sql.Column(sql.String, nullable=False)
+    created_date = sql.Column(sql.DateTime, default=datetime.datetime.now, nullable=False)
 
-    auths = orm.relationship("Auth", back_populates="user", cascade="all, delete-orphan")
+    auths = orm.relationship("Auth", back_populates="user", lazy="selectin",
+                             cascade="all, delete-orphan", passive_deletes=True)
     subscriptions = orm.relationship("Subscription", back_populates="user",
-                                    cascade="all, delete-orphan", lazy="selectin")
+                                     cascade="all, delete-orphan", lazy="selectin")
 
     def set_password(self, password: str):
         self.hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -37,12 +38,12 @@ class User(SQLBase):
 class Auth(SQLBase):
     __tablename__ = "authentications"
 
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    session_token = sqlalchemy.Column(sqlalchemy.String, unique=True, default=lambda: str(uuid.uuid4()))
-    user_agent = sqlalchemy.Column(sqlalchemy.String)
-    created_at = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
-    last_activity = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
-    logout_at = sqlalchemy.Column(sqlalchemy.DateTime)
+    id = sql.Column(sql.Integer, primary_key=True, autoincrement=True, nullable=False)
+    session_token = sql.Column(sql.String, unique=True, default=lambda: str(uuid.uuid4()), nullable=False)
+    user_agent = sql.Column(sql.String)
+    created_at = sql.Column(sql.DateTime, default=datetime.datetime.now, nullable=False)
+    last_activity = sql.Column(sql.DateTime, default=datetime.datetime.now, nullable=False)
+    logout_at = sql.Column(sql.DateTime)
 
-    user_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("users.id"))
+    user_id = sql.Column(sql.Integer, sql.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = orm.relationship("User", back_populates="auths", lazy="selectin")
