@@ -1,6 +1,6 @@
 from database.models.__meta__ import SQLBase
 from sqlalchemy import orm
-import sqlalchemy
+import sqlalchemy as sql
 import datetime
 import uuid
 
@@ -8,13 +8,13 @@ import uuid
 class ParseNews(SQLBase):
     __tablename__ = "parse_news"
 
-    id = sqlalchemy.Column(
-        sqlalchemy.String, primary_key=True, unique=True,
+    id = sql.Column(
+        sql.String, primary_key=True, unique=True,
         nullable=False, default=lambda: uuid.uuid4().hex)
-    url = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    is_valid = sqlalchemy.Column(sqlalchemy.Boolean)
-    created_at = sqlalchemy.Column(
-        sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
+    url = sql.Column(sql.String, nullable=False)
+    is_valid = sql.Column(sql.Boolean)
+    created_at = sql.Column(
+        sql.DateTime, default=datetime.datetime.now, nullable=False)
 
     news = orm.relationship(
         "News", back_populates="parse_news", uselist=False,
@@ -24,16 +24,16 @@ class ParseNews(SQLBase):
 class News(SQLBase):
     __tablename__ = "news"
 
-    id = sqlalchemy.Column(
-        sqlalchemy.String, sqlalchemy.ForeignKey("parse_news.id", ondelete="CASCADE"),
+    id = sql.Column(
+        sql.String, sql.ForeignKey("parse_news.id", ondelete="CASCADE"),
         primary_key=True, unique=True, nullable=False)
-    title = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    content = sqlalchemy.Column(sqlalchemy.Text, nullable=False)
-    date = sqlalchemy.Column(sqlalchemy.Date, default=datetime.datetime.now)
-    source = sqlalchemy.Column(sqlalchemy.String)
-    category = sqlalchemy.Column(sqlalchemy.String)
-    created_at = sqlalchemy.Column(
-        sqlalchemy.DateTime, default=datetime.datetime.now, nullable=False)
+    title = sql.Column(sql.String, nullable=False)
+    content = sql.Column(sql.Text, nullable=False)
+    date = sql.Column(sql.Date, default=datetime.datetime.now)
+    source = sql.Column(sql.String)
+    category = sql.Column(sql.String)
+    created_at = sql.Column(
+        sql.DateTime, default=datetime.datetime.now, nullable=False)
 
     parse_news = orm.relationship(
         "ParseNews", back_populates="news", uselist=False, lazy="selectin")
