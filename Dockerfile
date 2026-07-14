@@ -14,9 +14,9 @@ COPY pyproject.toml poetry.lock /tmp/
 
 RUN poetry config virtualenvs.create false && poetry install --only main --no-root
 
-ENV PYTHONPATH /backend
-WORKDIR /backend
-COPY . .
+ENV PYTHONPATH /app
+WORKDIR /app
+COPY backend/ .
 
 FROM base AS debug
 CMD fastapi dev --entrypoint main:app --host 0.0.0.0 --port 8000

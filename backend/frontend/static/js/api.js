@@ -35,10 +35,7 @@
   };
 
   function apiBaseUrl() {
-    const configured = typeof config.baseUrl === "string" ? config.baseUrl : "";
-    const raw = configured.replace(/\/+$/, "");
-    if (!raw) return "/api";
-    return raw.endsWith("/api") ? raw : `${raw}/api`;
+    return "/api";
   }
 
   function activeUserId() {
