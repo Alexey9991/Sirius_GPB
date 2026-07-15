@@ -1,4 +1,4 @@
-# dbtest/
+dbtest/
 .env
 __pycache__/
 *.py[cod]

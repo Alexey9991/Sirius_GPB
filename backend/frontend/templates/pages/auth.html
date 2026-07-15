@@ -1,0 +1,42 @@
+<template id="template-login">
+  <div class="auth-shell page-enter">
+    <section class="auth-card">
+      <div class="auth-mark">GPB</div>
+      <h1>Вход в Risk Desk</h1>
+      <p class="auth-intro">Авторизуйтесь, чтобы видеть персональные подписки, историю анализов и уведомления аккаунта.</p>
+      <form id="loginForm" class="form-stack">
+        <div class="field"><label for="loginUsername">Имя пользователя</label><input id="loginUsername" class="input" autocomplete="username" required></div>
+        <div class="field"><label for="loginPassword">Пароль</label><input id="loginPassword" class="input" type="password" autocomplete="current-password" minlength="6" required></div>
+        <div id="loginError" class="form-error"></div>
+        <button id="loginSubmit" class="primary-btn auth-submit" type="submit">Войти</button>
+      </form>
+      <p class="auth-switch">Нет аккаунта? <button data-route="register">Создать профиль</button></p>
+    </section>
+  </div>
+</template>
+
+<template id="template-register">
+  <div class="auth-shell page-enter">
+    <section class="auth-card">
+      <div class="auth-mark">GPB</div>
+      <h1>Регистрация аналитика</h1>
+      <p class="auth-intro">Создайте профиль, чтобы подписки и история анализов были привязаны к конкретному аккаунту.</p>
+      <form id="registerForm" class="form-stack">
+        <div class="field"><label for="registerUsername">ФИО или имя пользователя</label><input id="registerUsername" class="input" autocomplete="username" maxlength="100" required></div>
+        <div class="field"><label for="registerEmail">Корпоративная почта</label><input id="registerEmail" class="input" type="email" autocomplete="email" maxlength="100" required></div>
+        <div class="form-row">
+          <div class="field"><label for="registerRole">Роль</label><input id="registerRole" class="input" maxlength="100" placeholder="Например, аналитик рисков" required></div>
+          <div class="field"><label for="registerDivision">Подразделение</label><input id="registerDivision" class="input" maxlength="100" placeholder="Департамент или дирекция" required></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label for="registerPassword">Пароль</label><input id="registerPassword" class="input" type="password" autocomplete="new-password" minlength="6" maxlength="100" required></div>
+          <div class="field"><label for="registerConfirm">Повторите пароль</label><input id="registerConfirm" class="input" type="password" autocomplete="new-password" minlength="6" maxlength="100" required></div>
+        </div>
+        <label class="auth-policy"><input id="registerPolicy" type="checkbox" required><span>Я принимаю условия использования сервиса</span></label>
+        <div id="registerError" class="form-error"></div>
+        <button id="registerSubmit" class="primary-btn auth-submit" type="submit">Создать аккаунт</button>
+      </form>
+      <p class="auth-switch">Уже есть аккаунт? <button data-route="login">Войти</button></p>
+    </section>
+  </div>
+</template>

@@ -1,27 +1,25 @@
-import os
-import json
-import queue
 import threading
-from datetime import datetime
-from sqlalchemy.orm import Session
-from db import global_init, create_session
-from db.__all_models import *
-from news_parsers import import_parsers
+import queue
+import json
 import tqdm
+import os
+
+from news_parsers import import_parsers
 
 
 
 class NewsImporter:
-    def __init__(self, db_url: str=None, workers: int=10):
-        self.db_url = db_url
+    def __init__(self, output_file: str="news.json", workers: int=10):
+        if not os.path.exists(output_file):
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write("[]")
+        self.output_file = output_file
         self.workers = workers
         self.parsers = import_parsers()
         self.tasks = queue.Queue()
         self.progress = queue.Queue()
         self.to_save = queue.Queue()
         self.stop = threading.Event()
-        self.engine = global_init(db_url)
-        self.session = create_session()
 
     def run(self, filepath: str):
         reader = threading.Thread(target=self._reader, args=(filepath,), daemon=True)
@@ -43,11 +41,8 @@ class NewsImporter:
             self.tasks.put(None)
 
     def _worker(self):
-        sess = Session(self.engine)
-        while True:
+        while self.tasks.get():
             task = self.tasks.get()
-            if task is None:
-                break
             parser = self._get_parser(task["url"])
             if not parser:
                 self.progress.put(1)
@@ -55,20 +50,17 @@ class NewsImporter:
             try:
                 data = parser.get_news(task["url"])
                 if data.get("title"):
-                    news = News(
-                        id=task["id"],
-                        title=data["title"],
-                        content=data["content"],
-                        date=datetime.strptime(task["published_at"], "%Y-%m-%d").date(),
-                        source=task["source"],
-                        category=data.get("category")
-                    )
-                    if not sess.query(News).filter(News.id == news.id).first():
-                        self.to_save.put(news)
+                    self.to_save.put({
+                        "id": task["id"],
+                        "title": data["title"],
+                        "content": data["content"],
+                        "date": task["published_at"],
+                        "source": task["source"],
+                        "category": data.get("category")
+                    })
                 self.progress.put(1)
             except Exception:
                 self.progress.put(1)
-        sess.close()
 
     def _get_parser(self, url):
         for prefix, parser in self.parsers.items():
@@ -79,12 +71,9 @@ class NewsImporter:
     def _monitor(self, total):
         batch = []
         with tqdm.tqdm(total=total, desc="Импорт", unit="запись") as pbar:
-            while True:
+            while not self._done():
                 self._process_progress(pbar)
                 self._flush_batch(batch)
-                if self._done():
-                    break
-        self.session.close()
 
     def _process_progress(self, pbar):
         try:
@@ -97,10 +86,14 @@ class NewsImporter:
         try:
             news = self.to_save.get_nowait()
             batch.append(news)
-            if len(batch) >= 100:
-                for n in batch:
-                    self.session.merge(n)
-                self.session.commit()
+            if len(batch) >= 1000:
+                with open(self.output_file, "r+", encoding="utf-8") as f:
+                    try:
+                        prev_news = json.load(f)
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        prev_news = []
+                with open(self.output_file, "w", encoding="utf-8") as f:
+                    json.dump(prev_news + batch, f, ensure_ascii=False)
                 batch.clear()
         except queue.Empty:
             pass
@@ -113,6 +106,6 @@ class NewsImporter:
 
 
 if __name__ == "__main__":
-    importer = NewsImporter(workers=10)
-    importer.run(os.path.join(os.path.dirname(__file__), "dbtest",
-                              "news_merged_20260624_125713.jsonl"))
+    importer = NewsImporter("news.json", workers=11)
+    importer.run(os.path.join(
+        os.path.dirname(__file__), "dbtest", "news_merged_20260624_125713.jsonl"))
