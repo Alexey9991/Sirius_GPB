@@ -9,12 +9,13 @@
   const state = { overview: null, analysis: null, streamInsight: null, pendingInsightQuestion: "", selectedImpactEventId: "", alerts: [], projects: [], events: [], notifications: [], notificationsInitialized: false, analysisHistory: [], riskChanges: [], pendingAnalysis: "", pendingProjectContext: null, searchQuery: "", projectSort: "risk-desc", subscriptions: readUserSubscriptions(), backendSubscriptionsOwnerId: null, pushEnabled: localStorage.getItem("risk-intelligence:push-enabled") === "true" && "Notification" in window && Notification.permission === "granted", currentUser: null };
   const routeTitles = {
     dashboard: "Мониторинг", "ai-analysis": "ИИ-анализ потока", projects: "Объекты", news: "Поток",
-    history: "Журнал", notifications: "Уведомления", profile: "Профиль аналитика", search: "Поиск", login: "Вход", register: "Регистрация",
+    history: "Журнал", notifications: "Уведомления", profile: "Профиль аналитика", search: "Поиск", "project-detail": "Карточка ЖК", login: "Вход", register: "Регистрация",
   };
   const routePaths = {
     dashboard: "/index.html",
     "ai-analysis": "/ai-analysis.html",
     projects: "/projects.html",
+    "project-detail": "/project-detail.html",
     news: "/news.html",
     history: "/history.html",
     notifications: "/notifications.html",
@@ -167,6 +168,11 @@
     return `data-analyze-id="${esc(project.id || "")}" data-analyze-name="${esc(project.name || project.project_name || "")}" data-analyze-city="${esc(project.city || "")}" data-analyze-developer="${esc(project.developer || "")}"`;
   }
 
+  function projectDetailAttrs(project) {
+    if (!project) return "";
+    return `data-project-detail-id="${esc(project.id || "")}" data-project-detail-name="${esc(project.name || project.project_name || "")}" data-project-detail-city="${esc(project.city || "")}" data-project-detail-developer="${esc(project.developer || "")}"`;
+  }
+
   const pageRenderers = {};
 
   function registerPage(route, renderer) {
@@ -187,7 +193,7 @@
     app, globalSearch, notificationOverlay, initialRoute, defaultUser, defaultSubscriptions, state, routeTitles, routePaths, pendingKeys, searchHistoryKey, palette,
     esc, currentRoute, readPendingValue, readPendingJson, pageHtml, componentHtml, navigate, setActiveNav, initials, updateHeaderUser, showToast,
     loading, renderError, emptyHtml, chip, shortTime, dateTime, subscriptionKey, readUserSubscriptions, saveUserSubscriptions, setCurrentUser, refreshSession,
-    uniqueValues, levelRank, projectByName, projectAnalyzeAttrs, registerPage, renderRoute,
+    uniqueValues, levelRank, projectByName, projectAnalyzeAttrs, projectDetailAttrs, registerPage, renderRoute,
   };
 
   window.RiskDesk = ctx;
@@ -200,6 +206,17 @@
     }
     const routeTarget = event.target.closest("[data-route]");
     if (routeTarget) { event.preventDefault(); ctx.closeNotificationOverlay?.(); navigate(routeTarget.dataset.route); return; }
+    const projectDetailTarget = event.target.closest("[data-project-detail-id]");
+    if (projectDetailTarget) {
+      event.preventDefault();
+      const url = new URL(routePaths["project-detail"], window.location.origin);
+      url.searchParams.set("id", projectDetailTarget.dataset.projectDetailId || "");
+      if (projectDetailTarget.dataset.projectDetailName) url.searchParams.set("name", projectDetailTarget.dataset.projectDetailName);
+      if (projectDetailTarget.dataset.projectDetailCity) url.searchParams.set("city", projectDetailTarget.dataset.projectDetailCity);
+      if (projectDetailTarget.dataset.projectDetailDeveloper) url.searchParams.set("developer", projectDetailTarget.dataset.projectDetailDeveloper);
+      window.location.href = `${url.pathname}${url.search}`;
+      return;
+    }
     const actionTarget = event.target.closest("[data-action]");
     if (actionTarget?.dataset.action === "toggle-notifications") {
       event.preventDefault();
