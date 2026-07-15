@@ -8,12 +8,20 @@ from typing import Any
 def normalize_domrf_object(
     raw: dict[str, Any],
     *,
-    object_id: int,
+    object_id: str,
     source_url: str,
 ) -> dict[str, Any]:
     payload = _unwrap_payload(raw)
     normalized = {
         "domrf_object_id": str(_first_value(payload, "objectId", "objId", "houseId", "id") or object_id),
+        "problem_house_id": _first_value(
+            payload,
+            "problemHouseId",
+            "problemObjectId",
+            "problemId",
+            "houseProblemId",
+            "problemCardId",
+        ),
         "name": _first_value(
             payload,
             "objectName",
@@ -34,6 +42,16 @@ def normalize_domrf_object(
             "organizationName",
             "developer",
         ),
+        "company_group": _first_value(
+            payload,
+            "companyGroup",
+            "companyGroupName",
+            "developerGroup",
+            "developerGroupName",
+            "groupCompany",
+            "groupName",
+            "holdingName",
+        ),
         "developer_inn": _first_value(payload, "developerInn", "builderInn", "inn"),
         "developer_ogrn": _first_value(payload, "developerOgrn", "builderOgrn", "ogrn"),
         "status": _first_value(payload, "constructionStatus", "statusName", "status"),
@@ -52,6 +70,15 @@ def normalize_domrf_object(
             "rveActualDate",
             "commissioningDate",
         )),
+        "commissioning": _first_value(
+            payload,
+            "commissioning",
+            "commissioningPeriod",
+            "commissioningQuarter",
+            "rvePeriod",
+            "putIntoOperation",
+            " ввод в эксплуатацию",
+        ),
         "construction_progress": _to_float(_first_value(
             payload,
             "constructionProgress",
@@ -62,6 +89,7 @@ def normalize_domrf_object(
         )),
         "documents": _first_value(payload, "documents", "projectDeclarations", "declarations") or [],
         "photos": _first_value(payload, "photos", "progressPhotos", "constructionPhotos") or [],
+        "problem_events": _problem_events(payload),
         "source_url": source_url,
     }
     normalized["risk_hints"] = _risk_hints(normalized)
@@ -101,6 +129,15 @@ def _first_value(payload: Any, *aliases: str) -> Any:
     return None
 
 
+def _first_list_value(payload: Any, *aliases: str) -> list[Any]:
+    aliases_normalized = {_key(alias) for alias in aliases}
+    for obj in _walk(payload):
+        for key, value in obj.items():
+            if _key(str(key)) in aliases_normalized and isinstance(value, list):
+                return value
+    return []
+
+
 def _to_date(value: Any) -> str | None:
     if value in (None, ""):
         return None
@@ -125,6 +162,91 @@ def _to_float(value: Any) -> float | None:
     if not match:
         return None
     return float(match.group(0).replace(",", "."))
+
+
+def _problem_events(payload: Any) -> list[dict[str, str | None]]:
+    raw_events = _first_list_value(
+        payload,
+        "problemEvents",
+        "problemMessages",
+        "problemFacts",
+        "problemInfo",
+        "problemStatuses",
+        "events",
+        "measures",
+        "supportMeasures",
+        "bankruptcyMessages",
+    )
+    events = [_normalize_problem_event(item) for item in raw_events]
+    events = [item for item in events if item["title"] or item["summary"]]
+    if events:
+        return events[:12]
+
+    picked: list[dict[str, str | None]] = []
+    keywords = (
+        "банкрот", "конкурс", "проблем", "обманут", "дольщик",
+        "инвестор", "фонд", "214-фз", "214", "ввод",
+    )
+    for obj in _walk(payload):
+        text = " ".join(str(v) for v in obj.values() if isinstance(v, (str, int, float)))
+        lowered = text.lower()
+        if len(text) < 20 or not any(keyword in lowered for keyword in keywords):
+            continue
+        event = _normalize_problem_event(obj)
+        if event["title"] or event["summary"]:
+            picked.append(event)
+        if len(picked) >= 12:
+            break
+    return picked
+
+
+def _normalize_problem_event(item: Any) -> dict[str, str | None]:
+    if isinstance(item, str):
+        return {"title": item[:120], "summary": item, "date": None, "level": "medium"}
+    if not isinstance(item, dict):
+        return {"title": None, "summary": None, "date": None, "level": "medium"}
+
+    title = _local_first(item, "title", "name", "eventName", "statusName", "type", "kind")
+    summary = _local_first(
+        item,
+        "summary",
+        "description",
+        "text",
+        "message",
+        "comment",
+        "reason",
+        "info",
+        "content",
+    )
+    date = _to_date(_local_first(item, "date", "eventDate", "createdAt", "publicationDate", "dt"))
+    level = _local_first(item, "level", "riskLevel", "severity") or _infer_problem_level(f"{title or ''} {summary or ''}")
+    if not summary and title:
+        summary = title
+    if not title and summary:
+        title = str(summary).split(".")[0][:120]
+    return {
+        "title": str(title) if title else None,
+        "summary": str(summary) if summary else None,
+        "date": date,
+        "level": str(level).lower() if level else "medium",
+    }
+
+
+def _local_first(item: dict[str, Any], *aliases: str) -> Any:
+    aliases_normalized = {_key(alias) for alias in aliases}
+    for key, value in item.items():
+        if _key(str(key)) in aliases_normalized and value not in (None, ""):
+            return value
+    return None
+
+
+def _infer_problem_level(text: str) -> str:
+    lowered = text.lower()
+    if any(word in lowered for word in ("банкрот", "конкурс", "судебн", "214-фз")):
+        return "high"
+    if any(word in lowered for word in ("инвестор", "фонд", "дольщик", "проблем")):
+        return "medium"
+    return "low"
 
 
 def _risk_hints(data: dict[str, Any]) -> list[dict[str, str]]:
@@ -165,5 +287,11 @@ def _risk_hints(data: dict[str, Any]) -> list[dict[str, str]]:
             "level": "low",
             "type": "missing_construction_photos",
             "summary": "В ответе источника не найдены фото хода строительства.",
+        })
+    for event in data.get("problem_events") or []:
+        hints.append({
+            "level": str(event.get("level") or "medium"),
+            "type": str(event.get("title") or "problem_object"),
+            "summary": str(event.get("summary") or "По объекту найден проблемный статус."),
         })
     return hints
