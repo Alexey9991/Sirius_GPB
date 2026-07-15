@@ -2,7 +2,7 @@
   const ctx = window.RiskDesk;
   const {
     app, state, esc, currentRoute, pageHtml, componentHtml, showToast,
-    loading, renderError, emptyHtml, chip, dateTime, levelRank, projectDetailAttrs,
+    loading, renderError, emptyHtml, chip, dateTime, levelRank, projectDetailAttrs, openProjectDetailFromElement,
   } = ctx;
 
   const PROJECT_LIMIT_STEP = 30;
@@ -167,6 +167,29 @@
     setScrollLoadingState(false);
   }
 
+  function attachProjectRowClicks() {
+    const { body } = projectControls();
+    if (!body || body.dataset.clicksAttached === "true") return;
+    body.dataset.clicksAttached = "true";
+    body.addEventListener("click", (event) => {
+      const row = event.target.closest("[data-project-detail-id]");
+      if (!row || !body.contains(row)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof openProjectDetailFromElement === "function") {
+        openProjectDetailFromElement(row);
+        return;
+      }
+      const url = new URL("/project-detail.html", window.location.origin);
+      url.searchParams.set("id", row.dataset.projectDetailId || "");
+      if (row.dataset.projectDetailName) url.searchParams.set("name", row.dataset.projectDetailName);
+      if (row.dataset.projectDetailCity) url.searchParams.set("city", row.dataset.projectDetailCity);
+      if (row.dataset.projectDetailDeveloper) url.searchParams.set("developer", row.dataset.projectDetailDeveloper);
+      if (row.dataset.projectDetailDomrfId) url.searchParams.set("domrf_id", row.dataset.projectDetailDomrfId);
+      window.location.href = `${url.pathname}${url.search}`;
+    });
+  }
+
   async function renderProjects() {
     loading();
     try {
@@ -176,6 +199,7 @@
       app.innerHTML = pageHtml("projects", { PROJECT_ROWS: projectTable(state.projects) });
 
       const { search, level, sort, loadMoreButton } = projectControls();
+      attachProjectRowClicks();
       sort.value = state.projectSort;
 
       const refreshFromControls = () => {
