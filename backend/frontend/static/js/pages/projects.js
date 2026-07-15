@@ -2,7 +2,7 @@
   const ctx = window.RiskDesk;
   const {
     app, state, esc, currentRoute, pageHtml, componentHtml, showToast,
-    loading, renderError, emptyHtml, chip, dateTime, levelRank, projectAnalyzeAttrs,
+    loading, renderError, emptyHtml, chip, dateTime, levelRank, projectDetailAttrs,
   } = ctx;
 
   const PROJECT_LIMIT_STEP = 30;
@@ -46,7 +46,7 @@
 
   function projectTable(items) {
     return sortProjects(items).map((p) => componentHtml("project-table-row", {
-      ANALYZE_ATTRS: projectAnalyzeAttrs(p),
+      DETAIL_ATTRS: projectDetailAttrs(p),
       NAME: esc(p.name),
       CITY: esc(p.city),
       DEVELOPER: esc(p.developer),
