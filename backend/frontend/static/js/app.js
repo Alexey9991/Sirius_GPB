@@ -168,9 +168,37 @@
     return `data-analyze-id="${esc(project.id || "")}" data-analyze-name="${esc(project.name || project.project_name || "")}" data-analyze-city="${esc(project.city || "")}" data-analyze-developer="${esc(project.developer || "")}"`;
   }
 
+  function firstProjectValue(project, keys) {
+    for (const key of keys) {
+      const value = key.split(".").reduce((current, part) => current?.[part], project);
+      if (value !== null && value !== undefined && value !== "") return value;
+    }
+    return "";
+  }
+
   function projectDetailAttrs(project) {
     if (!project) return "";
-    return `data-project-detail-id="${esc(project.id || "")}" data-project-detail-name="${esc(project.name || project.project_name || "")}" data-project-detail-city="${esc(project.city || "")}" data-project-detail-developer="${esc(project.developer || "")}"`;
+    const raw = project.raw || {};
+    const id = firstProjectValue({ ...project, raw }, ["id", "project_id", "projectId", "raw.id", "raw.project_id"]);
+    const name = firstProjectValue(project, ["name", "project_name", "raw.name"]);
+    const city = firstProjectValue(project, ["city", "city_name", "raw.city.name", "raw.city_name"]);
+    const developer = firstProjectValue(project, ["developer", "developer_name", "raw.developer.name", "raw.developer_name"]);
+    const domrfId = firstProjectValue(project, [
+      "domrf_object_id", "domrf_id", "object_id", "house_id",
+      "raw.domrf_object_id", "raw.domrf_id", "raw.object_id", "raw.house_id", "raw.domrf.id",
+    ]);
+    return `data-project-detail-id="${esc(id || name)}" data-project-detail-name="${esc(name)}" data-project-detail-city="${esc(city)}" data-project-detail-developer="${esc(developer)}" data-project-detail-domrf-id="${esc(domrfId)}"`;
+  }
+
+  function openProjectDetailFromElement(element) {
+    if (!element) return;
+    const url = new URL(routePaths["project-detail"], window.location.origin);
+    url.searchParams.set("id", element.dataset.projectDetailId || "");
+    if (element.dataset.projectDetailName) url.searchParams.set("name", element.dataset.projectDetailName);
+    if (element.dataset.projectDetailCity) url.searchParams.set("city", element.dataset.projectDetailCity);
+    if (element.dataset.projectDetailDeveloper) url.searchParams.set("developer", element.dataset.projectDetailDeveloper);
+    if (element.dataset.projectDetailDomrfId) url.searchParams.set("domrf_id", element.dataset.projectDetailDomrfId);
+    window.location.href = `${url.pathname}${url.search}`;
   }
 
   const pageRenderers = {};
@@ -193,7 +221,7 @@
     app, globalSearch, notificationOverlay, initialRoute, defaultUser, defaultSubscriptions, state, routeTitles, routePaths, pendingKeys, searchHistoryKey, palette,
     esc, currentRoute, readPendingValue, readPendingJson, pageHtml, componentHtml, navigate, setActiveNav, initials, updateHeaderUser, showToast,
     loading, renderError, emptyHtml, chip, shortTime, dateTime, subscriptionKey, readUserSubscriptions, saveUserSubscriptions, setCurrentUser, refreshSession,
-    uniqueValues, levelRank, projectByName, projectAnalyzeAttrs, projectDetailAttrs, registerPage, renderRoute,
+    uniqueValues, levelRank, projectByName, projectAnalyzeAttrs, projectDetailAttrs, openProjectDetailFromElement, registerPage, renderRoute,
   };
 
   window.RiskDesk = ctx;
@@ -204,19 +232,14 @@
     if (notificationOverlay && !notificationOverlay.hidden && !notificationButton && !notificationPopover) {
       ctx.closeNotificationOverlay?.();
     }
-    const routeTarget = event.target.closest("[data-route]");
-    if (routeTarget) { event.preventDefault(); ctx.closeNotificationOverlay?.(); navigate(routeTarget.dataset.route); return; }
     const projectDetailTarget = event.target.closest("[data-project-detail-id]");
     if (projectDetailTarget) {
       event.preventDefault();
-      const url = new URL(routePaths["project-detail"], window.location.origin);
-      url.searchParams.set("id", projectDetailTarget.dataset.projectDetailId || "");
-      if (projectDetailTarget.dataset.projectDetailName) url.searchParams.set("name", projectDetailTarget.dataset.projectDetailName);
-      if (projectDetailTarget.dataset.projectDetailCity) url.searchParams.set("city", projectDetailTarget.dataset.projectDetailCity);
-      if (projectDetailTarget.dataset.projectDetailDeveloper) url.searchParams.set("developer", projectDetailTarget.dataset.projectDetailDeveloper);
-      window.location.href = `${url.pathname}${url.search}`;
+      openProjectDetailFromElement(projectDetailTarget);
       return;
     }
+    const routeTarget = event.target.closest("[data-route]");
+    if (routeTarget) { event.preventDefault(); ctx.closeNotificationOverlay?.(); navigate(routeTarget.dataset.route); return; }
     const actionTarget = event.target.closest("[data-action]");
     if (actionTarget?.dataset.action === "toggle-notifications") {
       event.preventDefault();

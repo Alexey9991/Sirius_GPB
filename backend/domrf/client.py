@@ -31,7 +31,7 @@ class DomRfClient:
         if settings.domrf.AUTH_TOKEN:
             self.headers["Authorization"] = f"Bearer {settings.domrf.AUTH_TOKEN}"
 
-    async def probe_object(self, object_id: int) -> list[dict[str, Any]]:
+    async def probe_object(self, object_id: str) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
         async with httpx.AsyncClient(
             timeout=self.timeout,
@@ -57,7 +57,7 @@ class DomRfClient:
                     })
         return results
 
-    async def get_object(self, object_id: int) -> dict[str, Any]:
+    async def get_object(self, object_id: str) -> dict[str, Any]:
         raw, source_url = await self._load_object_json(object_id)
         normalized = normalize_domrf_object(raw, object_id=object_id, source_url=source_url)
         return {
@@ -67,7 +67,7 @@ class DomRfClient:
             "object": normalized,
         }
 
-    async def _load_object_json(self, object_id: int) -> tuple[dict[str, Any], str]:
+    async def _load_object_json(self, object_id: str) -> tuple[dict[str, Any], str]:
         async with httpx.AsyncClient(
             timeout=self.timeout,
             follow_redirects=True,

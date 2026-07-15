@@ -15,7 +15,7 @@ domrf_router = APIRouter(prefix="/domrf")
 
 
 class DomRfSyncRequest(BaseModel):
-    object_ids: list[int]
+    object_ids: list[str]
 
 
 def _require_auth(auth: AuthSess) -> None:
@@ -25,7 +25,7 @@ def _require_auth(auth: AuthSess) -> None:
 
 @domrf_router.get("/object/{object_id}")
 async def get_domrf_object(
-    object_id: int,
+    object_id: str,
     auth: AuthSess,
     db_sess: DbSess,
     sync: bool = False,
@@ -60,7 +60,7 @@ async def sync_domrf_objects(data: DomRfSyncRequest, auth: AuthSess, db_sess: Db
 
 
 @domrf_router.get("/probe/{object_id}")
-async def probe_domrf_object(object_id: int, auth: AuthSess):
+async def probe_domrf_object(object_id: str, auth: AuthSess):
     return await DomRfClient().probe_object(object_id)
 
 
