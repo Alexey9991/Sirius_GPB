@@ -131,11 +131,6 @@
     return `${apiBaseUrl()}/account/${suffix}`;
   }
 
-  function domRfUrl(path = "") {
-    const suffix = String(path).replace(/^\/+/, "");
-    return `${apiBaseUrl()}/domrf/${suffix}`;
-  }
-
   function apiErrorMessage(payload, fallback) {
     const detail = payload && typeof payload === "object" ? payload.detail || payload.message : payload;
     if (Array.isArray(detail)) {
@@ -700,19 +695,6 @@
     };
   }
 
-  async function getProjectById(projectId, limit = 300) {
-    const projects = await normalizedProjects({ limit, force: true });
-    return projects.find((project) => project.id === normalizeText(projectId)) || null;
-  }
-
-  async function getDomRfObject(objectId, options = {}) {
-    const query = new URLSearchParams();
-    if (options.sync) query.set("sync", "true");
-    return request(`${domRfUrl(`object/${encodeURIComponent(objectId)}`)}${query.size ? `?${query}` : ""}`, {
-      timeoutMs: options.timeoutMs || 30000,
-    });
-  }
-
   window.api = {
     getOverview,
     analyze: analyzeProject,
@@ -732,8 +714,6 @@
     deleteAccount,
     clearAlerts,
     searchSite,
-    getProjectById,
-    getDomRfObject,
     getCities: (limit = DEFAULT_LIMIT) => getTable("cities", limit),
     getDevelopers: (limit = DEFAULT_LIMIT) => getTable("developers", limit),
     getSubscriptions: (limit = DEFAULT_LIMIT) => getTable("subscriptions", limit),
