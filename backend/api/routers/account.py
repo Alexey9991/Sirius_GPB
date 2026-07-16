@@ -68,9 +68,8 @@ async def sign(form_type: str, data: dict, request: Request, db_sess: DbSess):
     await db_sess.commit()
     await db_sess.refresh(auth)
     response = Response("Successful login.", status_code=200)
-    response.set_cookie(
-        key="session_token", value=auth.session_token, httponly=True,
-        samesite="lax", max_age=60 * 60 * 24 * 30, secure=True)
+    response.set_cookie(key="session_token", value=auth.session_token, httponly=True,
+                        samesite="lax", max_age=60 * 60 * 24 * 30)
     return response
 
 
