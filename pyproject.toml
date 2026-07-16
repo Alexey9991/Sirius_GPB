@@ -5,10 +5,10 @@ description = "RAG-Система анализа новостного поток
 authors = [
     {name = "B1t0ne",email = "hornid2010@mail.ru"}
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "sqlalchemy (>=2.0.51,<3.0.0)",
-    "pandas (>=3.0.3,<4.0.0)",
+    "pandas (>=2.2.0,<3.0.0)",
     "fastapi[standard] (>=0.139.0,<0.140.0)",
     "httpx (>=0.28.1,<0.29.0)",
     "beautifulsoup4 (>=4.15.0,<5.0.0)",
@@ -17,7 +17,10 @@ dependencies = [
     "pydantic (>=2.13.4,<3.0.0)",
     "pydantic-settings (>=2.14.2,<3.0.0)",
     "python-multipart (>=0.0.32,<0.0.33)",
-    "bcrypt (>=5.0.0,<6.0.0)"
+    "bcrypt (>=5.0.0,<6.0.0)",
+    "transformers (>=5.13.1,<6.0.0)",
+    "pymorphy3 (>=2.0.6,<3.0.0)",
+    "torch (>=2.13.0,<3.0.0)"
 ]
 
 
