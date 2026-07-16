@@ -3,10 +3,13 @@ import pymorphy3
 import joblib
 import nltk
 import re
+from os import path
 
 
 class TextClassifier:
-    def __init__(self, model_path='logres.pkl', tfidf_path='tfidf.pkl'):
+    def __init__(
+            self, model_path=path.join(path.dirname(__file__), 'models', 'logres.pkl'),
+            tfidf_path=path.join(path.dirname(__file__), 'models', 'tfidf.pkl')):
         self.model = joblib.load(model_path)
         self.tfidf = joblib.load(tfidf_path)
         nltk.download('stopwords', quiet=True)
