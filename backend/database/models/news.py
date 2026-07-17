@@ -11,7 +11,7 @@ class ParseNews(SQLBase):
     id = sql.Column(
         sql.String, primary_key=True, unique=True,
         nullable=False, default=lambda: uuid.uuid4().hex)
-    url = sql.Column(sql.String, nullable=False)
+    url = sql.Column(sql.String, unique=True, nullable=False, index=True)
     is_valid = sql.Column(sql.Boolean)
     created_at = sql.Column(
         sql.DateTime, default=datetime.datetime.now, nullable=False)
