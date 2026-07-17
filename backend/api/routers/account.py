@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import Response
 from fastapi import APIRouter
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from typing import Annotated, Tuple
 from datetime import datetime
 
@@ -51,9 +51,13 @@ async def sign(form_type: str, data: dict, request: Request, db_sess: DbSess):
             raise HTTPException(403, "Подтвердите соглашение с условиями использования!")
         if reg_data.password != reg_data.password_again:
             raise HTTPException(409, "Введённые пароли не совпадают!")
-        stmt = select(User).filter(User.name == reg_data.username)
-        if (await db_sess.execute(stmt)).scalars().first():
-            raise HTTPException(409, "Такой пользователь уже существует.")
+        stmt = select(User).filter(
+            or_(User.name == reg_data.username, User.email == reg_data.email))
+        old_user = (await db_sess.execute(stmt)).scalars().first()
+        if old_user:
+            raise HTTPException(409, "Данный email уже занят." 
+                                if old_user.email == reg_data.email
+                                else "Такой пользователь уже существует.")
         user = User(name=reg_data.username, email=reg_data.email,
                     role=reg_data.role, division=reg_data.division)
         user.set_password(reg_data.password)
