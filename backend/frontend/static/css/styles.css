@@ -446,6 +446,11 @@ body {
   box-shadow: none;
 }
 
+.notification-button,
+.profile-button {
+  height: 48px;
+}
+
 .header-action:hover,
 .header-action.active {
   transform: none;

@@ -1,15 +1,33 @@
 (function () {
   const ctx = window.RiskDesk;
   const {
-    app, state, esc, pageHtml, componentHtml, showToast,
+    app, state, esc, currentRoute, pageHtml, componentHtml, showToast,
     loading, renderError, emptyHtml, chip, shortTime,
   } = ctx;
+
+  const NEWS_LIMIT_STEP = 30;
+  let newsScrollHandler = null;
+  let newsLimit = NEWS_LIMIT_STEP;
+  let newsLoading = false;
+  let newsAutoPaused = false;
+
+  function safeSourceUrl(value) {
+    const raw = String(value || "").trim();
+    if (!raw || raw === "#") return "#";
+    try {
+      const url = new URL(raw, window.location.origin);
+      return ["http:", "https:"].includes(url.protocol) ? url.href : "#";
+    } catch (_) {
+      return "#";
+    }
+  }
 
   function feedRows(items) {
     return items.map((item) => componentHtml("feed-row", {
       SEVERITY_CLASS: item.level === "YELLOW" ? "yellow" : "",
       SEVERITY_STYLE: item.level === "GREEN" ? "background:#149447" : "",
       TITLE: esc(item.title),
+      URL: esc(safeSourceUrl(item.source_url)),
       CHIP: chip(item.level),
       SUMMARY: esc(item.summary),
       PROJECT_NAME: esc(item.project_name),
@@ -36,9 +54,28 @@
     };
   }
 
+  function readNewsLimitFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const raw = Number(params.get("limit"));
+    if (!Number.isFinite(raw) || raw <= 0) return NEWS_LIMIT_STEP;
+    return Math.max(NEWS_LIMIT_STEP, Math.ceil(raw / NEWS_LIMIT_STEP) * NEWS_LIMIT_STEP);
+  }
+
+  function syncNewsLimitToUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("limit", String(newsLimit));
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function setNewsLoadingState(visible) {
+    const status = document.getElementById("newsLoadStatus");
+    if (status) status.hidden = !visible;
+  }
+
   async function loadSelectedFeed({ force = false } = {}) {
     const table = state.newsTable || "impact_signals";
-    state.events = await window.api.getFeed(table, { force, limit: 30 });
+    state.events = await window.api.getFeed(table, { force, limit: newsLimit });
+    newsAutoPaused = state.events.length < newsLimit;
     return state.events;
   }
 
@@ -50,11 +87,57 @@
     filterNewsFeed();
   }
 
+  function isNewsPageBottom() {
+    const doc = document.documentElement;
+    return window.innerHeight + window.scrollY >= doc.scrollHeight - 32;
+  }
+
+  async function loadMoreNews() {
+    if (newsLoading || newsAutoPaused) return;
+    newsLoading = true;
+    const previousLimit = newsLimit;
+    const previousLength = state.events.length;
+    newsLimit += NEWS_LIMIT_STEP;
+    syncNewsLimitToUrl();
+    setNewsLoadingState(true);
+    try {
+      await loadSelectedFeed({ force: true });
+      updateNewsView();
+      newsAutoPaused = state.events.length <= previousLength || state.events.length < newsLimit;
+    } catch (error) {
+      newsLimit = previousLimit;
+      syncNewsLimitToUrl();
+      newsAutoPaused = true;
+      showToast(`Не удалось загрузить следующую порцию новостей: ${error.message}`);
+    } finally {
+      setNewsLoadingState(false);
+      newsLoading = false;
+    }
+  }
+
+  function attachNewsScroll() {
+    if (newsScrollHandler) window.removeEventListener("scroll", newsScrollHandler);
+    newsScrollHandler = () => {
+      if (currentRoute() !== "news" || newsLoading || newsAutoPaused || !isNewsPageBottom()) return;
+      loadMoreNews();
+    };
+    window.addEventListener("scroll", newsScrollHandler, { passive: true });
+  }
+
+  function resetNewsLimit() {
+    newsLimit = NEWS_LIMIT_STEP;
+    newsAutoPaused = false;
+    syncNewsLimitToUrl();
+    setNewsLoadingState(false);
+  }
+
   async function renderNewsFeed() {
     loading();
     try {
       state.newsTable ||= "impact_signals";
-      await loadSelectedFeed();
+      newsLimit = readNewsLimitFromUrl();
+      syncNewsLimitToUrl();
+      await loadSelectedFeed({ force: true });
       const counts = newsCounts(state.events);
       app.innerHTML = pageHtml("news", {
         EVENTS_COUNT: state.events.length,
@@ -70,6 +153,7 @@
         state.newsTable = tableSelect.value;
         tableSelect.disabled = true;
         try {
+          resetNewsLimit();
           await loadSelectedFeed({ force: true });
           updateNewsView();
         } catch (error) {
@@ -82,6 +166,7 @@
         const button = document.getElementById("refreshFeed");
         button.disabled = true;
         try {
+          newsAutoPaused = false;
           await loadSelectedFeed({ force: true });
           updateNewsView();
           showToast("Лента обновлена");
@@ -91,6 +176,8 @@
           button.disabled = false;
         }
       });
+      setNewsLoadingState(false);
+      attachNewsScroll();
     } catch (error) {
       renderError(error);
     }

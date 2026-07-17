@@ -11,6 +11,7 @@
   let projectLimit = PROJECT_LIMIT_STEP;
   let projectAutoPaused = false;
   let projectLoading = false;
+  let projectAllLoaded = false;
 
   function sortProjects(items) {
     const sorted = [...items];
@@ -77,8 +78,16 @@
       body: document.getElementById("projectBody"),
       loadMoreWrap: document.querySelector(".project-load-more"),
       loadMoreButton: document.getElementById("loadMoreProjects"),
+      loadAllButton: document.getElementById("loadAllProjects"),
       loadStatus: document.getElementById("projectLoadStatus"),
     };
+  }
+
+  function setLoadAllState(busy = false) {
+    const { loadAllButton } = projectControls();
+    if (!loadAllButton) return;
+    loadAllButton.disabled = busy || projectAllLoaded;
+    loadAllButton.textContent = busy ? "Загружаем…" : projectAllLoaded ? "Все загружено" : "Загрузить все";
   }
 
   function setLoadMoreState(visible, busy = false) {
@@ -111,30 +120,42 @@
     return document.getElementById("projectLevel")?.value || "ALL";
   }
 
-  async function fetchProjects({ reset = false, fromButton = false } = {}) {
+  async function fetchProjects({ reset = false, fromButton = false, all = false } = {}) {
     if (projectLoading) return;
     projectLoading = true;
     const showScrollLoader = !reset && !fromButton && !projectAutoPaused;
     setScrollLoadingState(showScrollLoader);
     if (fromButton || projectAutoPaused) setLoadMoreState(true, true);
+    if (all) {
+      setLoadMoreState(false);
+      setScrollLoadingState(true);
+      setLoadAllState(true);
+    }
 
     const previousLength = reset ? 0 : (state.projects || []).length;
     try {
-      state.projects = await window.api.getProjects(currentProjectQuery(), currentProjectLevel(), projectLimit, { force: true });
+      state.projects = await window.api.getProjects(
+        currentProjectQuery(),
+        currentProjectLevel(),
+        all ? null : projectLimit,
+        { force: true, all },
+      );
       renderProjectRows();
 
       const hasNewRows = reset || state.projects.length > previousLength;
-      projectAutoPaused = !reset && !hasNewRows;
-      setLoadMoreState(projectAutoPaused, false);
+      projectAllLoaded = all;
+      projectAutoPaused = all || (!reset && !hasNewRows);
+      setLoadMoreState(!all && projectAutoPaused, false);
     } catch (error) {
       if (reset) renderError(error);
       else {
         projectAutoPaused = true;
-        setLoadMoreState(true, false);
+        setLoadMoreState(!all, false);
         showToast(error.message || "Не удалось загрузить следующую порцию");
       }
     } finally {
       setScrollLoadingState(false);
+      setLoadAllState(false);
       projectLoading = false;
     }
   }
@@ -162,20 +183,24 @@
   function resetProjectLimit() {
     projectLimit = PROJECT_LIMIT_STEP;
     projectAutoPaused = false;
+    projectAllLoaded = false;
     syncProjectLimitToUrl();
     setLoadMoreState(false);
     setScrollLoadingState(false);
+    setLoadAllState(false);
   }
 
   async function renderProjects() {
     loading();
     try {
+      projectAutoPaused = false;
+      projectAllLoaded = false;
       projectLimit = readProjectLimitFromUrl();
       syncProjectLimitToUrl();
       state.projects = await window.api.getProjects("", "ALL", projectLimit, { force: true });
       app.innerHTML = pageHtml("projects", { PROJECT_ROWS: projectTable(state.projects) });
 
-      const { search, level, sort, loadMoreButton } = projectControls();
+      const { search, level, sort, loadMoreButton, loadAllButton } = projectControls();
       sort.value = state.projectSort;
 
       const refreshFromControls = () => {
@@ -195,6 +220,7 @@
       level.addEventListener("change", resetAndFetch);
       sort.addEventListener("change", refreshFromControls);
       loadMoreButton.addEventListener("click", () => increaseProjectLimitAndLoad("button"));
+      loadAllButton.addEventListener("click", () => fetchProjects({ all: true }));
       document.querySelectorAll("[data-sort-field]").forEach((button) => button.addEventListener("click", () => {
         nextProjectSort(button.dataset.sortField);
         sort.value = state.projectSort;
@@ -203,6 +229,7 @@
 
       setLoadMoreState(false);
       setScrollLoadingState(false);
+      setLoadAllState(false);
       attachProjectScroll();
     } catch (error) {
       renderError(error);

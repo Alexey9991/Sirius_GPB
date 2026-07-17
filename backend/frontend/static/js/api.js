@@ -179,23 +179,27 @@
   }
 
   async function getTable(table, limit = DEFAULT_LIMIT) {
-    const rows = await request(tableUrl(table, { limit: normalizeLimit(limit) }));
+    const params = limit == null ? {} : { limit: normalizeLimit(limit) };
+    const rows = await request(tableUrl(table, params));
     return Array.isArray(rows) ? rows : [];
   }
 
   async function searchTable(table, stype, query, limit = DEFAULT_LIMIT) {
-    const rows = await request(searchUrl(table, { stype, q: normalizeText(query), limit: normalizeLimit(limit) }));
+    const params = { stype, q: normalizeText(query) };
+    if (limit != null) params.limit = normalizeLimit(limit);
+    const rows = await request(searchUrl(table, params));
     return Array.isArray(rows) ? rows : [];
   }
 
   async function backendProjects(limit = DEFAULT_LIMIT, options = {}) {
-    const normalizedLimit = normalizeLimit(limit);
+    const fetchAll = options.all === true;
+    const normalizedLimit = fetchAll ? Infinity : normalizeLimit(limit);
     if (!options.force && cache.projects && cache.projectsLimit >= normalizedLimit) {
-      return cache.projects.slice(0, normalizedLimit);
+      return fetchAll ? cache.projects : cache.projects.slice(0, normalizedLimit);
     }
     if (!cache.projectsRequest || cache.projectsRequestLimit !== normalizedLimit || options.force) {
       cache.projectsRequestLimit = normalizedLimit;
-      cache.projectsRequest = getTable("projects", normalizedLimit).finally(() => {
+      cache.projectsRequest = getTable("projects", fetchAll ? null : normalizedLimit).finally(() => {
         cache.projectsRequest = null;
         cache.projectsRequestLimit = 0;
       });
@@ -205,7 +209,7 @@
     cache.normalizedProjects = null;
     cache.normalizedProjectsWithEvents = null;
     cache.normalizedProjectsLimit = 0;
-    return cache.projects.slice(0, normalizedLimit);
+    return fetchAll ? cache.projects : cache.projects.slice(0, normalizedLimit);
   }
 
   async function backendNews(options = {}) {
@@ -363,17 +367,18 @@
   }
 
   async function normalizedProjects(options = {}) {
-    const limit = normalizeLimit(options.limit);
+    const fetchAll = options.all === true;
+    const limit = fetchAll ? Infinity : normalizeLimit(options.limit);
     const query = normalizeText(options.query);
     const projects = query
-      ? await searchTable("projects", "name", query, limit)
-      : await backendProjects(limit, { force: options.force });
+      ? await searchTable("projects", "name", query, fetchAll ? null : limit)
+      : await backendProjects(limit, { force: options.force, all: fetchAll });
     const events = options.events || null;
     const withEvents = Array.isArray(events);
     const canUseCache = !query && !options.force;
 
     if (!withEvents && canUseCache && cache.normalizedProjects && cache.normalizedProjectsLimit >= limit) {
-      return cache.normalizedProjects.slice(0, limit);
+      return fetchAll ? cache.normalizedProjects : cache.normalizedProjects.slice(0, limit);
     }
     if (withEvents && cache.normalizedProjectsWithEvents) return cache.normalizedProjectsWithEvents;
     if (!withEvents && canUseCache && cache.normalizedProjectsRequest) return cache.normalizedProjectsRequest;
@@ -580,7 +585,7 @@
   }
 
   async function getProjects(query = "", level = "ALL", limit = DEFAULT_LIMIT, options = {}) {
-    const projects = await normalizedProjects({ query, limit, force: options.force });
+    const projects = await normalizedProjects({ query, limit, force: options.force, all: options.all });
     return projects.filter((project) => {
       const matchesLevel = level === "ALL" || project.level === level;
       return matchesLevel;

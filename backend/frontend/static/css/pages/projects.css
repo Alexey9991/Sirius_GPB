@@ -29,6 +29,11 @@
   min-width: 190px;
 }
 
+.project-load-all {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
 .sort-button {
   padding: 0;
   border: 0;
@@ -47,6 +52,10 @@
 @media (max-width: 720px) {
 .project-toolbar .select {
     min-width: 100%;
+  }
+
+.project-load-all {
+    width: 100%;
   }
 
 .subscribe-project-btn {
