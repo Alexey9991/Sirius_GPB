@@ -99,7 +99,9 @@ class NewsParser:
 
         for key, item in self.get_news_config.items():
             try:
-                if key=="content":
+                if isinstance(key, tuple):
+                    news_content[key] = item
+                elif key=="content":
                     news_content[key] = '\n'.join([elem.get_text(strip=True) 
                         for elem in soup.select(item) if elem.get_text(strip=True)])
                 else:
@@ -119,7 +121,7 @@ class NewsParser:
 class RiaRU(NewsParser):
     def __init__(self):
         super().__init__(
-            "https://realty.ria.ru", ".list-item__title.color-font-hover-only", "https://realty.ria.ru/economy/",
+            "https://realty.ria.ru", ".list-item__title.color-font-hover-only", "https://realty.ria.ru/",
             get_news={
                 "title": '.article__title',
                 "content": 'div.article__body.js-mediator-article.mia-analytics div.article__text',
@@ -139,20 +141,21 @@ class RBK(NewsParser):
                 "title": '.article__header__title-in.js-slide-title',
                 "content": 'div.article__text.article__text_free.js-article-body div.article__text__overview',
                 "date": "time.article__header__date",
+                "source": ("РБК Недвижимость",),
                 "category": "a.article__header__category"
             }
         )
 
 
 
-parsers = {
+PARSERS = {
     "https://realty.ria.ru": RiaRU,
     "https://realty.rbc.ru": RBK
 }
 
 
 def import_parsers():
-    loc_parsers = parsers
+    loc_parsers = PARSERS.copy()
     for url in list(loc_parsers.keys()):
         loc_parsers[url] = loc_parsers[url]()
     return loc_parsers

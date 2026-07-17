@@ -26,6 +26,19 @@ class DatabaseSettings(BaseSettings):
         )
         return database_url
 
+    @cached_property
+    def database_url_sync(self) -> URL:
+        database_url = URL(
+            drivername=self.DRIVER + "psycopg2",
+            username=self.USER,
+            password=self.PASSWORD,
+            host=self.HOST,
+            port=self.PORT,
+            database=self.NAME,
+            query={},  # type: ignore
+        )
+        return database_url
+
 
 class Settings(BaseSettings):
     HUGGING_FACE_TOKEN: str = None
