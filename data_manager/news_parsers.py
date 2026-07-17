@@ -1,6 +1,7 @@
-import requests
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin, unquote, urlparse, parse_qs
+from bs4 import BeautifulSoup
+from datetime import datetime
+import requests
 
 
 
@@ -99,13 +100,15 @@ class NewsParser:
 
         for key, item in self.get_news_config.items():
             try:
-                if isinstance(key, tuple):
-                    news_content[key] = item
+                if isinstance(key, tuple) and len(item)==1:
+                    news_content[key] = item[0]
                 elif key=="content":
                     news_content[key] = '\n'.join([elem.get_text(strip=True) 
                         for elem in soup.select(item) if elem.get_text(strip=True)])
                 else:
                     news_content[key] = soup.select_one(item).get_text(strip=True)
+                    if key=="date" and isinstance(key, tuple):
+                        news_content[key] = datetime.strptime(news_content[key], item[1])
             except:
                 news_content[key] = None
 
@@ -125,7 +128,7 @@ class RiaRU(NewsParser):
             get_news={
                 "title": '.article__title',
                 "content": 'div.article__body.js-mediator-article.mia-analytics div.article__text',
-                "date": "div.article__info-date",
+                "date": ("div.article__info-date", ""),
                 "source": "div.media__copyright-item.m-copyright",
                 "category": "a.article__tags-item"
             }
@@ -140,7 +143,7 @@ class RBK(NewsParser):
             get_news={
                 "title": '.article__header__title-in.js-slide-title',
                 "content": 'div.article__text.article__text_free.js-article-body div.article__text__overview',
-                "date": "time.article__header__date",
+                "date": ("time.article__header__date", ""),
                 "source": ("РБК Недвижимость",),
                 "category": "a.article__header__category"
             }
