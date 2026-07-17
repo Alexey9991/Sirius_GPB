@@ -448,6 +448,8 @@ body {
 
 .notification-button,
 .profile-button {
+  width: 194px;
+  min-width: 194px;
   height: 48px;
 }
 
@@ -879,6 +881,12 @@ body {
 @media (max-width: 560px) {
 .topbar {
     align-items: flex-start;
+  }
+
+  .notification-button,
+  .profile-button {
+    width: 48px;
+    min-width: 48px;
   }
 
   .brand {
