@@ -1,9 +1,9 @@
+from datetime import datetime
 import threading
 import queue
 import json
 import tqdm
 import os
-import datetime
 
 from news_parsers import import_parsers, PARSERS
 from backend.database.engine import session_maker_sync
@@ -139,7 +139,7 @@ class NewsParser:
                         if is_valid:
                             news_record = News(
                                 id=link.id, title=data["title"], content=data["content"],
-                                date=datetime.datetime.now().date(),
+                                date=datetime.strptime(data["date"], "%H:%M %d:%m:%Y"),
                                 source=data.get("source"), category=data.get("category"))
                             session.add(news_record)
                         session.commit()
