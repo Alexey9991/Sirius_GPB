@@ -19,7 +19,8 @@
 
 .confidence i { background: #008578; }
 
-.subscribe-project-btn {
+.subscribe-project-btn,
+.subscribe-entity-btn {
   min-height: 34px;
   padding: 0 12px;
   white-space: nowrap;
@@ -30,7 +31,8 @@
 }
 
 .project-load-all {
-  min-height: 40px;
+  height: 48px;
+  min-height: 48px;
   white-space: nowrap;
 }
 
@@ -58,7 +60,8 @@
     width: 100%;
   }
 
-.subscribe-project-btn {
+.subscribe-project-btn,
+.subscribe-entity-btn {
     width: 100%;
   }
 }

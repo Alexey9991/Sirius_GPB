@@ -56,7 +56,10 @@
   <section class="card">
     <div class="result-topline">
       <div class="result-kicker">[[CHIP]]</div>
-      <button class="[[SUBSCRIBE_CLASS]] subscribe-project-btn" data-action="toggle-project-subscription" data-project-name="[[PROJECT_NAME]]">[[SUBSCRIBE_LABEL]]</button>
+      <div class="result-actions">
+        <button class="[[PROJECT_SUBSCRIBE_CLASS]] subscribe-entity-btn" data-action="toggle-backend-subscription" data-subscription-type="project" data-subscription-id="[[PROJECT_ID]]" data-subscription-name="[[PROJECT_NAME]]" data-subscribe-label="Подписаться на ЖК" data-subscribed-label="Вы подписаны на ЖК" [[PROJECT_SUBSCRIBE_DISABLED]]>[[PROJECT_SUBSCRIBE_LABEL]]</button>
+        <button class="[[DEVELOPER_SUBSCRIBE_CLASS]] subscribe-entity-btn" data-action="toggle-backend-subscription" data-subscription-type="developer" data-subscription-id="[[DEVELOPER_ID]]" data-subscription-name="[[DEVELOPER_NAME]]" data-subscribe-label="Подписаться на застройщика" data-subscribed-label="Вы подписаны на застройщика" [[DEVELOPER_SUBSCRIBE_DISABLED]]>[[DEVELOPER_SUBSCRIBE_LABEL]]</button>
+      </div>
     </div>
     <h2 class="result-title">[[PROJECT_NAME]]</h2>
     <div class="result-summary">[[SUMMARY]]</div>

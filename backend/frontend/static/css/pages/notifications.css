@@ -2,6 +2,8 @@
 
 .notification-layout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 18px; align-items: start; }
 
+.page-heading-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
 .notification-list { display: grid; gap: 10px; }
 
 .notification-item { position: relative; display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: start; padding: 18px; border: 1px solid var(--line); border-radius: 20px; background: #fff; }
@@ -47,6 +49,10 @@
 }
 
 @media (max-width: 720px) {
+.page-heading-actions { width: 100%; }
+
+.page-heading-actions .secondary-btn { flex: 1 1 180px; }
+
 .notification-item { grid-template-columns: 40px 1fr; }
 
 .notification-time { grid-column: 2; }
