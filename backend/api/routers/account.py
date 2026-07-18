@@ -96,22 +96,28 @@ async def edit(data: dict, auth: AuthSess, db_sess: DbSess):
         user.role = reg_data.role or user.role
         user.division = reg_data.division or user.division
         await db_sess.commit()
-    except:
+    except Exception as e:
         await db_sess.rollback()
-        raise HTTPException(*auth)
+        if isinstance(auth, tuple):
+            raise HTTPException(*auth)
+        else:
+            raise HTTPException(500, e)
 
 
 @account_router.delete("/logout")
 async def logout(auth: AuthSess, db_sess: DbSess):
-    if isinstance(auth, Auth):
+    try:
         auth.logout_at = auth.last_activity
         await db_sess.commit()
         response = Response("Successful exit.", status_code=200)
         response.delete_cookie("session_token")
         return response
-    else:
+    except Exception as e:
         await db_sess.rollback()
-        return HTTPException(*auth)
+        if isinstance(auth, tuple):
+            raise HTTPException(*auth)
+        else:
+            raise HTTPException(500, e)
 
 
 @account_router.delete("/")
@@ -124,6 +130,9 @@ async def delete(auth: AuthSess, db_sess: DbSess):
         response = Response("Account successfuly deleted.", status_code=200)
         response.delete_cookie("session_token")
         return response
-    except:
+    except Exception as e:
         await db_sess.rollback()
-        raise HTTPException(*auth)
+        if isinstance(auth, tuple):
+            raise HTTPException(*auth)
+        else:
+            raise HTTPException(500, e)
