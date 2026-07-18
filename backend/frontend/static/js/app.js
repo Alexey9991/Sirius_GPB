@@ -186,11 +186,10 @@
         ));
       } else {
         const subscription = await window.api.subscribe(type, itemId);
-        state.backendSubscriptions.push(
-          subscription && typeof subscription === "object"
-            ? subscription
-            : { type, item_id: String(itemId) },
-        );
+        if (!subscription || typeof subscription !== "object") {
+          throw new Error("Сервер не вернул созданную подписку");
+        }
+        state.backendSubscriptions.push(subscription);
       }
 
       if (state.currentUser) state.currentUser.subscriptions = [...state.backendSubscriptions];

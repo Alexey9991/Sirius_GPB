@@ -119,6 +119,12 @@
     editForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const errorBox = document.getElementById("profileEditError");
+      const password = document.getElementById("profileEditPassword").value;
+      const passwordAgain = document.getElementById("profileEditConfirm").value;
+      if (password !== passwordAgain) {
+        errorBox.textContent = "Пароли не совпадают";
+        return;
+      }
       const button = document.getElementById("profileEditSubmit");
       button.disabled = true;
       button.textContent = "Сохраняем…";
@@ -128,6 +134,8 @@
           email: document.getElementById("profileEditEmail").value.trim(),
           role: document.getElementById("profileEditRole").value.trim(),
           division: document.getElementById("profileEditDivision").value.trim(),
+          password,
+          passwordAgain,
         });
         setCurrentUser(result.user);
         showToast("Профиль обновлён");

@@ -130,16 +130,7 @@ async function analyze(projectName, projectContext = {}) {
     const button = document.getElementById("analyzeButton");
     if (button) { button.disabled = true; button.textContent = "Анализируем…"; }
     try {
-      try {
-        state.analysis = await window.api.analyze(request);
-      } catch (apiError) {
-        if (typeof request === "object") {
-          console.warn("Backend не принял project_id, fallback на анализ по названию", apiError);
-          state.analysis = await window.api.analyze(value);
-        } else {
-          throw apiError;
-        }
-      }
+      state.analysis = await window.api.analyze(request);
       state.analysisHistory = [];
       state.riskChanges = [];
       rememberSearchHistory(state.analysis, value);
