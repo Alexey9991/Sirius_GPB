@@ -132,7 +132,7 @@
 
   function subscriptionUrl(type, itemId) {
     const query = new URLSearchParams({
-      sub_type: normalizeText(type),
+      type: normalizeText(type),
       item_id: String(itemId ?? ""),
     });
     return `${apiBaseUrl()}/data/subscriptions?${query}`;
@@ -521,8 +521,6 @@
     const analysis = {
       project_id: project.id || null,
       project_name: project.name,
-      city_id: project.city_id || null,
-      city_name: project.city || null,
       developer_id: project.developer_id || null,
       developer_name: project.developer || "Не указан",
       level,
