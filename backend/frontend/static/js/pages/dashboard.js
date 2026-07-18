@@ -4,7 +4,7 @@
     app, globalSearch, notificationOverlay, state, routeTitles, routePaths, pendingKeys, searchHistoryKey, palette,
     esc, currentRoute, readPendingValue, readPendingJson, pageHtml, componentHtml, navigate, initials, updateHeaderUser, showToast,
     loading, renderError, emptyHtml, chip, shortTime, dateTime, saveUserSubscriptions, setCurrentUser, uniqueValues,
-    levelRank, projectByName, projectAnalyzeAttrs, renderRoute,
+    levelRank, projectByName, projectAnalyzeAttrs, hasBackendSubscription, renderRoute,
   } = ctx;
 
 function projectRows(items) {
@@ -57,7 +57,8 @@ function searchHistoryRows(items) {
 function analysisPanel(data) {
     if (!data) return componentHtml("analysis-empty");
     const p = palette[data.level] || palette.GREEN;
-    const subscribed = state.subscriptions.projects.includes(data.project_name);
+    const projectSubscribed = hasBackendSubscription("project", data.project_id);
+    const developerSubscribed = hasBackendSubscription("developer", data.developer_id);
     const events = (data.events || []).slice(0, 3).map((event) => componentHtml("event-mini", {
       TIME: shortTime(event.published_at),
       TITLE: esc(event.title),
@@ -66,9 +67,16 @@ function analysisPanel(data) {
     })).join("") || emptyHtml("Связанных публикаций не найдено");
     return componentHtml("analysis-panel", {
       CHIP: chip(data.level),
-      SUBSCRIBE_CLASS: subscribed ? "secondary-btn" : "primary-btn",
+      PROJECT_SUBSCRIBE_CLASS: projectSubscribed ? "secondary-btn" : "primary-btn",
+      PROJECT_SUBSCRIBE_LABEL: projectSubscribed ? "Вы подписаны на ЖК" : "Подписаться на ЖК",
+      PROJECT_SUBSCRIBE_DISABLED: data.project_id ? "" : "disabled",
+      PROJECT_ID: esc(data.project_id || ""),
       PROJECT_NAME: esc(data.project_name),
-      SUBSCRIBE_LABEL: subscribed ? "Вы подписаны" : "Подписаться на ЖК",
+      DEVELOPER_SUBSCRIBE_CLASS: developerSubscribed ? "secondary-btn" : "primary-btn",
+      DEVELOPER_SUBSCRIBE_LABEL: developerSubscribed ? "Вы подписаны на застройщика" : "Подписаться на застройщика",
+      DEVELOPER_SUBSCRIBE_DISABLED: data.developer_id ? "" : "disabled",
+      DEVELOPER_ID: esc(data.developer_id || ""),
+      DEVELOPER_NAME: esc(data.developer_name || "Застройщик не указан"),
       SUMMARY: esc(data.summary),
       RING_COLOR: p.color,
       SCORE: Number(data.score),
@@ -144,6 +152,7 @@ async function analyze(projectName, projectContext = {}) {
   }
 
   ctx.analyze = analyze;
+  ctx.analysisPanel = analysisPanel;
   ctx.renderDashboard = renderDashboard;
   ctx.registerPage("dashboard", renderDashboard);
 })();

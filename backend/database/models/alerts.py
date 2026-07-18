@@ -43,7 +43,7 @@ class Subscription(SQLBase):
     user_id = sql.Column(
         sql.Integer, sql.ForeignKey("users.id", ondelete="CASCADE"))
     type = sql.Column(sql.String, nullable=False)
-    item_id = sql.Column(sql.Integer, nullable=False)
+    item_id = sql.Column(sql.String, nullable=False)
 
     user = orm.relationship("User", back_populates="subscriptions")
     alert = orm.relationship(

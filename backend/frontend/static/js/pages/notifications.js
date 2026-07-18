@@ -7,19 +7,28 @@
     levelRank, projectByName, projectAnalyzeAttrs, renderRoute,
   } = ctx;
 
-function isSubscribed(item) {
-    const subscriptions = state.subscriptions || { locations: [], developers: [], projects: [] };
-    const project = item.city && item.developer ? item : projectByName(item.project_name || item.name);
-    return subscriptions.projects.includes(item.project_name || item.name)
-      || (project && subscriptions.locations.includes(project.city))
-      || (project && subscriptions.developers.includes(project.developer));
+  function isSubscribed(item) {
+    const subscriptions = Array.isArray(state.backendSubscriptions) ? state.backendSubscriptions : [];
+    if (subscriptions.some((subscription) => {
+      const type = String(subscription.type || "").toLowerCase();
+      const itemId = String(subscription.item_id ?? "");
+      if (["project", "projects", "object", "objects", "жк"].includes(type)) return itemId === String(item.project_id || "");
+      if (["developer", "developers", "застройщик"].includes(type)) return itemId === String(item.developer_id || "");
+      if (["city", "cities", "location", "locations"].includes(type)) return itemId === String(item.city_id || "");
+      return false;
+    })) return true;
+
+    const named = state.subscriptions || { locations: [], developers: [], projects: [] };
+    return named.projects.includes(item.project_name)
+      || named.developers.includes(item.developer)
+      || named.locations.includes(item.city);
   }
 
-function scopedNotifications() {
+  function scopedNotifications() {
     return state.notifications.filter(isSubscribed);
   }
 
-function updateNotificationBadge() {
+  function updateNotificationBadge() {
     const unread = scopedNotifications().filter((item) => !item.read).length;
     const counter = document.getElementById("notificationCount");
     const dot = document.querySelector(".notification-button .notification-dot");
@@ -27,16 +36,17 @@ function updateNotificationBadge() {
     if (dot) dot.style.display = unread ? "block" : "none";
   }
 
-async function ensureNotificationsLoaded() {
-    if (!state.events.length) state.events = await window.api.getEvents();
-    if (!state.projects.length) state.projects = await window.api.getProjects();
+  async function ensureNotificationsLoaded() {
     if (!state.notificationsInitialized) {
-      state.notifications = state.events.map((event, index) => ({ ...event, read: index > 2 }));
+      state.notifications = state.currentUser
+        ? (await window.api.getNotifications()).map((item) => ({ ...item, read: false }))
+        : [];
       state.notificationsInitialized = true;
     }
+    updateNotificationBadge();
   }
 
-function closeNotificationOverlay() {
+  function closeNotificationOverlay() {
     if (!notificationOverlay) return;
     notificationOverlay.hidden = true;
     notificationOverlay.innerHTML = "";
@@ -44,7 +54,7 @@ function closeNotificationOverlay() {
     document.querySelector(".notification-button")?.setAttribute("aria-expanded", "false");
   }
 
-function overlayNotificationRows(items) {
+  function overlayNotificationRows(items) {
     return items.slice(0, 8).map((item) => componentHtml("overlay-notification-item", {
       READ_CLASS: item.read ? "" : "unread",
       EVENT_ID: esc(item.id),
@@ -54,7 +64,7 @@ function overlayNotificationRows(items) {
     })).join("");
   }
 
-async function openNotificationOverlay() {
+  async function openNotificationOverlay() {
     if (!notificationOverlay) return;
     await ensureNotificationsLoaded();
     const visibleNotifications = scopedNotifications();
@@ -69,7 +79,7 @@ async function openNotificationOverlay() {
     document.querySelector(".notification-button")?.setAttribute("aria-expanded", "true");
   }
 
-async function toggleNotificationOverlay() {
+  async function toggleNotificationOverlay() {
     if (!notificationOverlay) return;
     if (!notificationOverlay.hidden) return closeNotificationOverlay();
     try {
@@ -79,7 +89,7 @@ async function toggleNotificationOverlay() {
     }
   }
 
-async function markOverlayNotificationsRead() {
+  async function markOverlayNotificationsRead() {
     const visibleIds = new Set(scopedNotifications().map((item) => item.id));
     state.notifications = state.notifications.map((item) => visibleIds.has(item.id) ? { ...item, read: true } : item);
     updateNotificationBadge();
@@ -87,20 +97,25 @@ async function markOverlayNotificationsRead() {
     showToast("Уведомления по подпискам прочитаны");
   }
 
-async function clearOverlayNotifications() {
+  async function deleteAllNotifications() {
     try {
       if (state.currentUser) await window.api.clearAlerts();
       state.notifications = [];
       state.notificationsInitialized = true;
       updateNotificationBadge();
-      await openNotificationOverlay();
       showToast("Уведомления удалены");
+      return true;
     } catch (error) {
       showToast(`Не удалось удалить уведомления: ${error.message}`);
+      return false;
     }
   }
 
-function showBrowserNotification(item) {
+  async function clearOverlayNotifications() {
+    if (await deleteAllNotifications()) await openNotificationOverlay();
+  }
+
+  function showBrowserNotification(item) {
     if (!state.pushEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
     try {
       new Notification(item.title, {
@@ -112,7 +127,7 @@ function showBrowserNotification(item) {
     }
   }
 
-async function togglePushNotifications() {
+  async function togglePushNotifications() {
     if (state.pushEnabled) {
       state.pushEnabled = false;
       localStorage.setItem("risk-intelligence:push-enabled", "false");
@@ -138,7 +153,7 @@ async function togglePushNotifications() {
     renderNotifications();
   }
 
-function notificationRows(items) {
+  function notificationRows(items) {
     return items.map((item) => componentHtml("notification-row", {
       READ_CLASS: item.read ? "" : "unread",
       SYMBOL: item.level === "RED" ? "!" : item.level === "YELLOW" ? "▲" : "✓",
@@ -149,16 +164,15 @@ function notificationRows(items) {
     })).join("");
   }
 
-async function renderNotifications() {
+  async function renderNotifications() {
     loading();
     try {
-      if (!state.events.length) state.events = await window.api.getEvents();
-      if (!state.projects.length) state.projects = await window.api.getProjects();
       await ensureNotificationsLoaded();
       const visibleNotifications = scopedNotifications();
       const unread = visibleNotifications.filter((item) => !item.read).length;
       app.innerHTML = pageHtml("notifications", {
         MARK_ALL_DISABLED: unread ? "" : "disabled",
+        CLEAR_ALL_DISABLED: visibleNotifications.length ? "" : "disabled",
         UNREAD_CHIP_CLASS: unread ? "red" : "green",
         UNREAD_LABEL: unread ? `${unread} новых` : "Всё прочитано",
         NOTIFICATION_ROWS: notificationRows(visibleNotifications) || emptyHtml("По текущим подпискам уведомлений нет. Измените подписки в профиле."),
@@ -180,6 +194,9 @@ async function renderNotifications() {
         showToast("Уведомления по подпискам отмечены прочитанными");
         renderNotifications();
       });
+      document.getElementById("clearAllNotifications").addEventListener("click", async () => {
+        if (await deleteAllNotifications()) renderNotifications();
+      });
       document.getElementById("pushToggle").addEventListener("click", togglePushNotifications);
       document.getElementById("testPush")?.addEventListener("click", () => {
         const item = visibleNotifications.find((notification) => notification.level === "RED") || visibleNotifications[0];
@@ -194,6 +211,7 @@ async function renderNotifications() {
   ctx.toggleNotificationOverlay = toggleNotificationOverlay;
   ctx.markOverlayNotificationsRead = markOverlayNotificationsRead;
   ctx.clearOverlayNotifications = clearOverlayNotifications;
+  ctx.deleteAllNotifications = deleteAllNotifications;
   ctx.showBrowserNotification = showBrowserNotification;
   ctx.renderNotifications = renderNotifications;
   ctx.registerPage("notifications", renderNotifications);

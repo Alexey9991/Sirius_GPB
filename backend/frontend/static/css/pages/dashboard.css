@@ -215,10 +215,21 @@
   margin-bottom: 0;
 }
 
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 @media (max-width: 720px) {
 .result-topline {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .result-actions {
+    width: 100%;
   }
 }
 

@@ -6,7 +6,7 @@
   const initialRoute = document.body.dataset.initialRoute || "dashboard";
   const defaultUser = null;
   const defaultSubscriptions = { locations: [], developers: [], projects: [] };
-  const state = { overview: null, analysis: null, streamInsight: null, pendingInsightQuestion: "", selectedImpactEventId: "", alerts: [], projects: [], events: [], notifications: [], notificationsInitialized: false, analysisHistory: [], riskChanges: [], pendingAnalysis: "", pendingProjectContext: null, searchQuery: "", projectSort: "risk-desc", subscriptions: readUserSubscriptions(), backendSubscriptionsOwnerId: null, pushEnabled: localStorage.getItem("risk-intelligence:push-enabled") === "true" && "Notification" in window && Notification.permission === "granted", currentUser: null };
+  const state = { overview: null, analysis: null, streamInsight: null, pendingInsightQuestion: "", selectedImpactEventId: "", alerts: [], projects: [], events: [], notifications: [], notificationsInitialized: false, analysisHistory: [], riskChanges: [], pendingAnalysis: "", pendingProjectContext: null, searchQuery: "", projectSort: "risk-desc", subscriptions: readUserSubscriptions(), backendSubscriptions: [], backendSubscriptionsOwnerId: null, pushEnabled: localStorage.getItem("risk-intelligence:push-enabled") === "true" && "Notification" in window && Notification.permission === "granted", currentUser: null };
   const routeTitles = {
     dashboard: "Мониторинг", "ai-analysis": "ИИ-анализ потока", projects: "Объекты", news: "Поток",
     history: "Журнал", notifications: "Уведомления", profile: "Профиль аналитика", search: "Поиск", login: "Вход", register: "Регистрация",
@@ -128,10 +128,87 @@
   }
 
   function setCurrentUser(user) {
+    const previousUserId = String(state.currentUser?.id || "");
+    const nextUserId = String(user?.id || "");
     state.currentUser = user;
+    state.backendSubscriptions = Array.isArray(user?.subscriptions) ? [...user.subscriptions] : [];
+    state.backendSubscriptionsOwnerId = null;
+    if (previousUserId !== nextUserId) {
+      state.notifications = [];
+      state.notificationsInitialized = false;
+    }
     localStorage.setItem("risk-intelligence:active-user-id", user?.id || "guest");
     state.subscriptions = readUserSubscriptions(user?.id);
     updateHeaderUser();
+  }
+
+  function hasBackendSubscription(type, itemId) {
+    const normalizedType = String(type || "").toLowerCase();
+    const normalizedId = String(itemId ?? "");
+    if (!normalizedId) return false;
+    return state.backendSubscriptions.some((subscription) => (
+      String(subscription.type || "").toLowerCase() === normalizedType
+      && String(subscription.item_id ?? "") === normalizedId
+    ));
+  }
+
+  function updateNamedSubscription(type, name, active) {
+    const collection = type === "developer" ? "developers" : type === "city" ? "locations" : "projects";
+    const values = new Set(state.subscriptions[collection] || []);
+    if (active) values.add(name);
+    else values.delete(name);
+    state.subscriptions[collection] = [...values].filter(Boolean).sort((a, b) => a.localeCompare(b, "ru"));
+    saveUserSubscriptions();
+  }
+
+  async function toggleBackendSubscription(type, itemId, name, button) {
+    if (!state.currentUser) {
+      showToast("Войдите в аккаунт, чтобы управлять подписками");
+      navigate("login");
+      return false;
+    }
+    if (!itemId) {
+      showToast("Не удалось определить объект подписки");
+      return false;
+    }
+
+    const active = hasBackendSubscription(type, itemId);
+    if (button) {
+      button.disabled = true;
+      button.textContent = active ? "Удаляем…" : "Подписываем…";
+    }
+    try {
+      if (active) {
+        await window.api.unsubscribe(type, itemId);
+        state.backendSubscriptions = state.backendSubscriptions.filter((subscription) => !(
+          String(subscription.type || "").toLowerCase() === String(type).toLowerCase()
+          && String(subscription.item_id ?? "") === String(itemId)
+        ));
+      } else {
+        const subscription = await window.api.subscribe(type, itemId);
+        state.backendSubscriptions.push(
+          subscription && typeof subscription === "object"
+            ? subscription
+            : { type, item_id: String(itemId) },
+        );
+      }
+
+      if (state.currentUser) state.currentUser.subscriptions = [...state.backendSubscriptions];
+      updateNamedSubscription(type, name, !active);
+      ctx.updateNotificationBadge?.();
+      if (currentRoute() === "dashboard" && state.analysis) {
+        document.getElementById("resultPanel").innerHTML = ctx.analysisPanel?.(state.analysis) || "";
+      }
+      showToast(active ? `${name} удалён из подписок` : `Подписка на ${name} включена`);
+      return true;
+    } catch (error) {
+      showToast(`Не удалось обновить подписку: ${error.message}`);
+      if (button) {
+        button.disabled = false;
+        button.textContent = active ? button.dataset.subscribedLabel : button.dataset.subscribeLabel;
+      }
+      return false;
+    }
   }
 
   async function refreshSession() {
@@ -187,7 +264,7 @@
     app, globalSearch, notificationOverlay, initialRoute, defaultUser, defaultSubscriptions, state, routeTitles, routePaths, pendingKeys, searchHistoryKey, palette,
     esc, currentRoute, readPendingValue, readPendingJson, pageHtml, componentHtml, navigate, setActiveNav, initials, updateHeaderUser, showToast,
     loading, renderError, emptyHtml, chip, shortTime, dateTime, subscriptionKey, readUserSubscriptions, saveUserSubscriptions, setCurrentUser, refreshSession,
-    uniqueValues, levelRank, projectByName, projectAnalyzeAttrs, registerPage, renderRoute,
+    uniqueValues, levelRank, projectByName, projectAnalyzeAttrs, hasBackendSubscription, toggleBackendSubscription, registerPage, renderRoute,
   };
 
   window.RiskDesk = ctx;
@@ -221,9 +298,14 @@
       await ctx.clearOverlayNotifications?.();
       return;
     }
-    if (actionTarget?.dataset.action === "toggle-project-subscription") {
+    if (actionTarget?.dataset.action === "toggle-backend-subscription") {
       event.preventDefault();
-      ctx.toggleProjectSubscription?.(actionTarget.dataset.projectName, actionTarget);
+      await toggleBackendSubscription(
+        actionTarget.dataset.subscriptionType,
+        actionTarget.dataset.subscriptionId,
+        actionTarget.dataset.subscriptionName,
+        actionTarget,
+      );
       return;
     }
     const aiTarget = event.target.closest("[data-ai-event]");

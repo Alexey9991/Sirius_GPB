@@ -11,9 +11,11 @@
 (function () {
   const config = window.APP_CONFIG || {};
   const DEFAULT_LIMIT = 30;
+  const FULL_DATA_LIMIT = 1000000;
   const storageKeys = {
     analysisHistory: "analysis-history",
     riskChanges: "risk-changes",
+    notificationsClearedAt: "notifications-cleared-at",
     users: "users",
   };
   const cache = {
@@ -131,6 +133,14 @@
     return `${apiBaseUrl()}/account/${suffix}`;
   }
 
+  function subscriptionUrl(type, itemId) {
+    const query = new URLSearchParams({
+      type: normalizeText(type),
+      item_id: String(itemId ?? ""),
+    });
+    return `${apiBaseUrl()}/data/subscriptions?${query}`;
+  }
+
   function apiErrorMessage(payload, fallback) {
     const detail = payload && typeof payload === "object" ? payload.detail || payload.message : payload;
     if (Array.isArray(detail)) {
@@ -179,27 +189,27 @@
   }
 
   async function getTable(table, limit = DEFAULT_LIMIT) {
-    const params = limit == null ? {} : { limit: normalizeLimit(limit) };
+    const params = { limit: limit == null ? FULL_DATA_LIMIT : normalizeLimit(limit) };
     const rows = await request(tableUrl(table, params));
     return Array.isArray(rows) ? rows : [];
   }
 
   async function searchTable(table, stype, query, limit = DEFAULT_LIMIT) {
     const params = { stype, q: normalizeText(query) };
-    if (limit != null) params.limit = normalizeLimit(limit);
+    params.limit = limit == null ? FULL_DATA_LIMIT : normalizeLimit(limit);
     const rows = await request(searchUrl(table, params));
     return Array.isArray(rows) ? rows : [];
   }
 
   async function backendProjects(limit = DEFAULT_LIMIT, options = {}) {
     const fetchAll = options.all === true;
-    const normalizedLimit = fetchAll ? Infinity : normalizeLimit(limit);
+    const normalizedLimit = fetchAll ? FULL_DATA_LIMIT : normalizeLimit(limit);
     if (!options.force && cache.projects && cache.projectsLimit >= normalizedLimit) {
       return fetchAll ? cache.projects : cache.projects.slice(0, normalizedLimit);
     }
     if (!cache.projectsRequest || cache.projectsRequestLimit !== normalizedLimit || options.force) {
       cache.projectsRequestLimit = normalizedLimit;
-      cache.projectsRequest = getTable("projects", fetchAll ? null : normalizedLimit).finally(() => {
+      cache.projectsRequest = getTable("projects", normalizedLimit).finally(() => {
         cache.projectsRequest = null;
         cache.projectsRequestLimit = 0;
       });
@@ -260,7 +270,9 @@
       news_id: normalizeText(news.id || signal.news_id || ""),
       project_id: normalizeText(signal.project_id || project.id || ""),
       project_name: normalizeText(project.name || signal.project_name, "Объект не указан"),
+      city_id: normalizeText(signal.city_id || city.id || project.city_id || ""),
       city: normalizeText(city.name || signal.city_name),
+      developer_id: normalizeText(signal.developer_id || developer.id || project.developer_id || ""),
       developer: normalizeText(developer.name || signal.developer_name),
       title,
       summary: compactText(news.content || title),
@@ -270,6 +282,7 @@
       score,
       source: normalizeText(news.source, "Backend API"),
       published_at: normalizeDate(news.date || news.created_at || signal.created_at),
+      created_at: normalizeDate(signal.created_at || news.created_at || news.date),
       source_url: sourceUrl,
       raw: signal,
     };
@@ -283,7 +296,9 @@
       news_id: normalizeText(news.id || ""),
       project_id: "",
       project_name: "Не привязано к ЖК",
+      city_id: "",
       city: "",
+      developer_id: "",
       developer: "",
       title: normalizeText(news.title, "Новость без заголовка"),
       summary: compactText(news.content || news.category || "Новость из backend API"),
@@ -293,6 +308,7 @@
       score: 0,
       source: normalizeText(news.source, "Backend API"),
       published_at: normalizeDate(news.date || news.created_at),
+      created_at: normalizeDate(news.created_at || news.date),
       source_url: normalizeText(news.parse_news?.url || news.url || "#"),
       raw: news,
     };
@@ -355,7 +371,9 @@
       id: normalizeText(project.id),
       name: normalizeText(project.name, "Объект без названия"),
       city: relationName(project, "city", "city_name") || "Не указан",
+      city_id: normalizeText(project.city?.id || project.city_id),
       developer: relationName(project, "developer", "developer_name") || "Не указан",
+      developer_id: normalizeText(project.developer?.id || project.developer_id),
       score,
       level: riskLevelFromScore(score),
       created_at: normalizeDate(project.created_at),
@@ -368,7 +386,7 @@
 
   async function normalizedProjects(options = {}) {
     const fetchAll = options.all === true;
-    const limit = fetchAll ? Infinity : normalizeLimit(options.limit);
+    const limit = fetchAll ? FULL_DATA_LIMIT : normalizeLimit(options.limit);
     const query = normalizeText(options.query);
     const projects = query
       ? await searchTable("projects", "name", query, fetchAll ? null : limit)
@@ -506,6 +524,8 @@
     const analysis = {
       project_id: project.id || null,
       project_name: project.name,
+      developer_id: project.developer_id || null,
+      developer_name: project.developer || "Не указан",
       level,
       score,
       summary: analysisSummary(project, projectEvents, level),
@@ -662,6 +682,7 @@
   }
 
   async function updateProfile(profile) {
+    const schemaPassword = "profile-edit";
     await request(accountUrl("edit"), {
       method: "POST",
       body: JSON.stringify({
@@ -669,8 +690,8 @@
         email: normalizeText(profile.email),
         role: normalizeText(profile.role),
         division: normalizeText(profile.division || profile.department),
-        password: String(profile.password || ""),
-        password_again: String(profile.passwordAgain || profile.password_again || profile.password || ""),
+        password: schemaPassword,
+        password_again: schemaPassword,
         policy_check: true,
       }),
     });
@@ -682,7 +703,26 @@
   }
 
   async function clearAlerts() {
-    return request(`${apiBaseUrl()}/data/alerts`, { method: "DELETE" });
+    const response = await request(`${apiBaseUrl()}/data/alerts`, { method: "DELETE" });
+    writeLocal(accountKey(storageKeys.notificationsClearedAt), Date.now());
+    return response;
+  }
+
+  async function getNotifications() {
+    const clearedAt = Number(readLocal(accountKey(storageKeys.notificationsClearedAt), 0)) || 0;
+    const events = await normalizedEvents();
+    return sortByDateDesc(events.filter((event) => (
+      event.level !== "GREEN"
+      && new Date(event.created_at || event.published_at).getTime() > clearedAt
+    )));
+  }
+
+  async function subscribe(type, itemId) {
+    return request(subscriptionUrl(type, itemId), { method: "PUT" });
+  }
+
+  async function unsubscribe(type, itemId) {
+    return request(subscriptionUrl(type, itemId), { method: "DELETE" });
   }
 
   async function searchSite(query, limit = DEFAULT_LIMIT) {
@@ -717,12 +757,14 @@
     logout,
     updateProfile,
     deleteAccount,
+    getNotifications,
     clearAlerts,
+    subscribe,
+    unsubscribe,
     searchSite,
     getCities: (limit = DEFAULT_LIMIT) => getTable("cities", limit),
     getDevelopers: (limit = DEFAULT_LIMIT) => getTable("developers", limit),
     getSubscriptions: (limit = DEFAULT_LIMIT) => getTable("subscriptions", limit),
-    getBackendAlerts: (limit = DEFAULT_LIMIT) => getTable("alerts", limit),
     searchProjectsByName: (query, limit = DEFAULT_LIMIT) => normalizedProjects({ query, limit, force: true }),
   };
 })();

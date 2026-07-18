@@ -4,10 +4,10 @@
     app, globalSearch, notificationOverlay, state, routeTitles, routePaths, pendingKeys, searchHistoryKey, palette,
     esc, currentRoute, readPendingValue, readPendingJson, pageHtml, componentHtml, navigate, initials, updateHeaderUser, showToast,
     loading, renderError, emptyHtml, chip, shortTime, dateTime, saveUserSubscriptions, setCurrentUser, uniqueValues,
-    levelRank, projectByName, projectAnalyzeAttrs, renderRoute,
+    levelRank, projectByName, projectAnalyzeAttrs, toggleBackendSubscription, renderRoute,
   } = ctx;
 
-function subscriptionCheckboxes(type, items) {
+  function subscriptionCheckboxes(type, items) {
     const selected = new Set(state.subscriptions[type] || []);
     const selectedItems = items.filter((item) => selected.has(item));
     if (!selectedItems.length) return emptyHtml("Нет выбранных подписок", "subscription-empty");
@@ -18,20 +18,30 @@ function subscriptionCheckboxes(type, items) {
     })).join("");
   }
 
-function updateSubscription(input) {
-    const type = input.dataset.subscription;
-    const value = input.value;
-    const current = new Set(state.subscriptions[type] || []);
-    if (input.checked) current.add(value);
-    else current.delete(value);
-    state.subscriptions[type] = [...current].sort((a, b) => a.localeCompare(b, "ru"));
-    saveUserSubscriptions();
-    ctx.updateNotificationBadge?.();
-    showToast("Подписки обновлены");
-    if (currentRoute() === "profile") renderProfile();
+  function subscriptionTarget(type, value) {
+    if (type === "projects") {
+      const project = state.projects.find((item) => item.name === value);
+      return { type: "project", id: project?.id, name: value };
+    }
+    if (type === "developers") {
+      const project = state.projects.find((item) => item.developer === value);
+      return { type: "developer", id: project?.developer_id || project?.raw?.developer?.id || project?.raw?.developer_id, name: value };
+    }
+    const project = state.projects.find((item) => item.city === value);
+    return { type: "city", id: project?.city_id || project?.raw?.city?.id || project?.raw?.city_id, name: value };
   }
 
-function backendSubscriptionNames(user, projects) {
+  async function updateSubscription(input) {
+    const type = input.dataset.subscription;
+    const value = input.value;
+    const target = subscriptionTarget(type, value);
+    input.disabled = true;
+    const updated = await toggleBackendSubscription(target.type, target.id, target.name);
+    if (updated && currentRoute() === "profile") return renderProfile();
+    input.disabled = false;
+  }
+
+  function backendSubscriptionNames(user, projects) {
     const result = { locations: [], developers: [], projects: [] };
     const subscriptions = Array.isArray(user?.subscriptions) ? user.subscriptions : [];
 
@@ -45,11 +55,11 @@ function backendSubscriptionNames(user, projects) {
         || subscription.name;
 
       if (type.includes("city") || type.includes("location") || type.includes("локац") || type.includes("город")) {
-        const project = projects.find((item) => String(item.raw?.city?.id ?? item.raw?.city_id ?? "") === itemId);
+        const project = projects.find((item) => String(item.city_id ?? item.raw?.city?.id ?? item.raw?.city_id ?? "") === itemId);
         const name = explicitName || project?.city;
         if (name) result.locations.push(name);
       } else if (type.includes("developer") || type.includes("застрой")) {
-        const project = projects.find((item) => String(item.raw?.developer?.id ?? item.raw?.developer_id ?? "") === itemId);
+        const project = projects.find((item) => String(item.developer_id ?? item.raw?.developer?.id ?? item.raw?.developer_id ?? "") === itemId);
         const name = explicitName || project?.developer;
         if (name) result.developers.push(name);
       } else if (type.includes("project") || type.includes("жк") || type.includes("объект")) {
@@ -65,28 +75,12 @@ function backendSubscriptionNames(user, projects) {
     ]));
   }
 
-function toggleProjectSubscription(projectName, button) {
-    const current = new Set(state.subscriptions.projects || []);
-    const active = current.has(projectName);
-    if (active) current.delete(projectName);
-    else current.add(projectName);
-    state.subscriptions.projects = [...current].sort((a, b) => a.localeCompare(b, "ru"));
-    saveUserSubscriptions();
-    ctx.updateNotificationBadge?.();
-    if (button) {
-      button.textContent = active ? "Подписаться на ЖК" : "Вы подписаны";
-      button.classList.toggle("primary-btn", active);
-      button.classList.toggle("secondary-btn", !active);
-    }
-    showToast(active ? `${projectName} удалён из подписок` : `Подписка на ${projectName} включена`);
-  }
-
-async function renderProfile() {
+  async function renderProfile() {
     if (!state.currentUser) return ctx.renderLogin();
     loading();
     const user = state.currentUser;
     try {
-      if (!state.projects.length) state.projects = await window.api.getProjects();
+      state.projects = await window.api.getProjects("", "ALL", null, { force: true, all: true });
       if (Array.isArray(user.subscriptions) && state.backendSubscriptionsOwnerId !== user.id) {
         state.subscriptions = backendSubscriptionNames(user, state.projects);
         state.backendSubscriptionsOwnerId = user.id;
@@ -125,12 +119,6 @@ async function renderProfile() {
     editForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const errorBox = document.getElementById("profileEditError");
-      const password = document.getElementById("profileEditPassword").value;
-      const passwordAgain = document.getElementById("profileEditConfirm").value;
-      if (password !== passwordAgain) {
-        errorBox.textContent = "Пароли не совпадают";
-        return;
-      }
       const button = document.getElementById("profileEditSubmit");
       button.disabled = true;
       button.textContent = "Сохраняем…";
@@ -140,8 +128,6 @@ async function renderProfile() {
           email: document.getElementById("profileEditEmail").value.trim(),
           role: document.getElementById("profileEditRole").value.trim(),
           division: document.getElementById("profileEditDivision").value.trim(),
-          password,
-          passwordAgain,
         });
         setCurrentUser(result.user);
         showToast("Профиль обновлён");
@@ -155,7 +141,6 @@ async function renderProfile() {
     });
   }
 
-  ctx.toggleProjectSubscription = toggleProjectSubscription;
   ctx.renderProfile = renderProfile;
   ctx.registerPage("profile", renderProfile);
 })();
