@@ -3,12 +3,14 @@ services:
     image: postgres:18.4
     container_name: siriusgpb-postgres
     restart: unless-stopped
+    networks:
+      - siriusgpb-network
     ports:
       - "5432:5432"
     env_file:
       - config/.env
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
 
   backend:
     image: siriusgpb-backend:latest
@@ -23,9 +25,6 @@ services:
       - config/.env
     depends_on:
       - postgres
-    volumes:
-      - ./backend:/app
-      - ./config:/app/config
 
 volumes:
   pgdata:
