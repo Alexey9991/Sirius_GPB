@@ -41,7 +41,6 @@ class DatabaseSettings(BaseSettings):
 
 
 class Settings(BaseSettings):
-    HUGGING_FACE_TOKEN: str = None
     database: DatabaseSettings = DatabaseSettings()
     FORBIDDEN_TABLES: list[str] = ["users", "authentications", "alerts", "subscriptions"]
 

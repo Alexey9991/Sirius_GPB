@@ -18,6 +18,7 @@ RUN poetry config virtualenvs.create false && poetry install --only main --no-ro
 ENV PYTHONPATH /app
 WORKDIR /app
 COPY backend/ .
+COPY config/ /app/config/
 
 FROM base AS debug
 CMD fastapi dev --entrypoint main:app --host 0.0.0.0 --port 8000
