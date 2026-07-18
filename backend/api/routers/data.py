@@ -41,26 +41,42 @@ async def search(table: str, q: str, stype: str, auth: AuthSess, db_sess: DbSess
     return result.all()
 
 
-@data_router.route("/subscriptions", ["PUT", "DELETE"])
-async def subscription(sub_type: str, item_id: int | str, request: Request, auth: AuthSess, db_sess: DbSess):
+@data_router.api_route("/subscriptions", methods=["PUT", "DELETE"])
+async def subscription(sub_type: str, item_id: str, request: Request, auth: AuthSess, db_sess: DbSess):
     try:
         if request.method == "PUT":
+            stmt = select(Subscription).where(and_(Subscription.user_id == auth.user_id,
+                Subscription.type == sub_type, Subscription.item_id == item_id))
+            existing = (await db_sess.execute(stmt)).scalars().first()
+            if existing:
+                raise HTTPException(409, "Subscription already exists")
             subs = Subscription(user_id=auth.user_id, type=sub_type, item_id=item_id)
-            await db_sess.add(subs)
-            await db_sess.flush()
-            response = subs
+            db_sess.add(subs)
+            await db_sess.commit()
+            await db_sess.refresh(subs)
+            return {"message": "Subscription created", "subscription": subs}
+
         elif request.method == "DELETE":
-            stmt = select(Subscription).where(and_(
-                Subscription.user_id == auth.user_id,
+            stmt = select(Subscription).where(and_(Subscription.user_id == auth.user_id,
                 Subscription.type == sub_type, Subscription.item_id == item_id))
             subscription = (await db_sess.execute(stmt)).scalars().first()
+
+            if not subscription:
+                raise HTTPException(404, "Subscription not found")
+            
             await db_sess.delete(subscription)
-            response = "Subscription deleted."
-        await db_sess.commit()
-        return response
-    except:
+            await db_sess.commit()
+            return {"message": "Subscription deleted successfully"}
+            
+        else:
+            raise HTTPException(405, "Method not allowed")
+
+    except Exception as e:
         await db_sess.rollback()
-        raise HTTPException(*auth)
+        if isinstance(auth, tuple):
+            raise HTTPException(*auth)
+        else:
+            raise HTTPException(500, e)
 
 
 @data_router.delete("/alerts")
@@ -72,6 +88,9 @@ async def delete_alerts(auth: AuthSess, db_sess: DbSess):
             await db_sess.delete(alert)
         await db_sess.commit()
         return "Alerts deleted."
-    except:
+    except Exception as e:
         await db_sess.rollback()
-        raise HTTPException(*auth)
+        if isinstance(auth, tuple):
+            raise HTTPException(*auth)
+        else:
+            raise HTTPException(500, e)

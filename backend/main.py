@@ -1,14 +1,22 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
 from sqlalchemy import text
 from pathlib import Path
 
 import api
 from frontend.route import router as frontend_router
-from database.engine import engine
+from database.engine import engine, engine_sync
+from database import SQLBase
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    SQLBase.metadata.create_all(engine_sync)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(api.router)
 app.include_router(frontend_router)
 

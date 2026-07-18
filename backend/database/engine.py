@@ -18,5 +18,4 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with session_maker() as sess:
         yield sess
 
-
 DbSess = Annotated[AsyncSession, Depends(get_session)]
