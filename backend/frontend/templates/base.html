@@ -17,12 +17,6 @@
   {% include "partials/overlays.html" %}
   {% include "pages/_all.html" %}
 
-  <script>
-    window.APP_CONFIG = {
-      useMock: {{ "true" if use_mock else "false" }},
-      baseUrl: "{{ api_base_url }}"
-    };
-  </script>
   <script src="/static/js/core/templates.js?v=20260715-attr-slots" defer></script>
   <script src="/static/js/api.js?v=20260718-api-alignment" defer></script>
   <script src="/static/js/app.js?v=20260718-api-alignment" defer></script>

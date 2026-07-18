@@ -38,7 +38,5 @@ def _render(request: Request, template: str) -> HTMLResponse:
         context={
             "request": request,
             "initial_route": page,
-            "use_mock": False,
-            "api_base_url": "",
         },
     )

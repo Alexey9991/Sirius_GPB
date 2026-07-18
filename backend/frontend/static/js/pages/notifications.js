@@ -9,19 +9,14 @@
 
   function isSubscribed(item) {
     const subscriptions = Array.isArray(state.backendSubscriptions) ? state.backendSubscriptions : [];
-    if (subscriptions.some((subscription) => {
+    return subscriptions.some((subscription) => {
       const type = String(subscription.type || "").toLowerCase();
       const itemId = String(subscription.item_id ?? "");
       if (["project", "projects", "object", "objects", "жк"].includes(type)) return itemId === String(item.project_id || "");
       if (["developer", "developers", "застройщик"].includes(type)) return itemId === String(item.developer_id || "");
       if (["city", "cities", "location", "locations"].includes(type)) return itemId === String(item.city_id || "");
       return false;
-    })) return true;
-
-    const named = state.subscriptions || { locations: [], developers: [], projects: [] };
-    return named.projects.includes(item.project_name)
-      || named.developers.includes(item.developer)
-      || named.locations.includes(item.city);
+    });
   }
 
   function scopedNotifications() {

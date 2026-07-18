@@ -9,14 +9,11 @@
  * backend rows into projects, events, alerts and object analysis objects.
  */
 (function () {
-  const config = window.APP_CONFIG || {};
   const DEFAULT_LIMIT = 30;
-  const FULL_DATA_LIMIT = 1000000;
+  const FULL_DATA_LIMIT = Number.MAX_SAFE_INTEGER;
   const storageKeys = {
     analysisHistory: "analysis-history",
     riskChanges: "risk-changes",
-    notificationsClearedAt: "notifications-cleared-at",
-    users: "users",
   };
   const cache = {
     projects: null,
@@ -682,7 +679,6 @@
   }
 
   async function updateProfile(profile) {
-    const schemaPassword = "profile-edit";
     await request(accountUrl("edit"), {
       method: "POST",
       body: JSON.stringify({
@@ -690,8 +686,8 @@
         email: normalizeText(profile.email),
         role: normalizeText(profile.role),
         division: normalizeText(profile.division || profile.department),
-        password: schemaPassword,
-        password_again: schemaPassword,
+        password: String(profile.password || ""),
+        password_again: String(profile.passwordAgain || profile.password_again || ""),
         policy_check: true,
       }),
     });
@@ -703,18 +699,26 @@
   }
 
   async function clearAlerts() {
-    const response = await request(`${apiBaseUrl()}/data/alerts`, { method: "DELETE" });
-    writeLocal(accountKey(storageKeys.notificationsClearedAt), Date.now());
-    return response;
+    return request(`${apiBaseUrl()}/data/alerts`, { method: "DELETE" });
   }
 
   async function getNotifications() {
-    const clearedAt = Number(readLocal(accountKey(storageKeys.notificationsClearedAt), 0)) || 0;
-    const events = await normalizedEvents();
-    return sortByDateDesc(events.filter((event) => (
-      event.level !== "GREEN"
-      && new Date(event.created_at || event.published_at).getTime() > clearedAt
-    )));
+    const user = await whoAmI();
+    const alerts = user.subscriptions.flatMap((subscription) => {
+      const items = subscription.alerts ?? subscription.alert ?? [];
+      return Array.isArray(items) ? items : [items];
+    });
+    return sortByDateDesc(alerts.filter(Boolean).map((alert) => {
+      const event = normalizeSignal(alert.impact_signal || {});
+      return {
+        ...event,
+        id: normalizeText(alert.id, event.id),
+        alert_id: normalizeText(alert.id),
+        published_at: normalizeDate(alert.created_at || event.published_at),
+        created_at: normalizeDate(alert.created_at || event.created_at),
+        raw: alert,
+      };
+    }));
   }
 
   async function subscribe(type, itemId) {
