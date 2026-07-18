@@ -42,17 +42,17 @@ async def search(table: str, q: str, stype: str, auth: AuthSess, db_sess: DbSess
 
 
 @data_router.route("/subscriptions", ["PUT", "DELETE"])
-async def put_alert(type: str, item_id: int | str, request: Request, auth: AuthSess, db_sess: DbSess):
+async def subscription(sub_type: str, item_id: int | str, request: Request, auth: AuthSess, db_sess: DbSess):
     try:
         if request.method == "PUT":
-            subs = Subscription(user_id=auth.user_id, type=type, item_id=item_id)
+            subs = Subscription(user_id=auth.user_id, type=sub_type, item_id=item_id)
             await db_sess.add(subs)
             await db_sess.flush()
             response = subs
         elif request.method == "DELETE":
             stmt = select(Subscription).where(and_(
                 Subscription.user_id == auth.user_id,
-                Subscription.type == type, Subscription.item_id == item_id))
+                Subscription.type == sub_type, Subscription.item_id == item_id))
             subscription = (await db_sess.execute(stmt)).scalars().first()
             await db_sess.delete(subscription)
             response = "Subscription deleted."

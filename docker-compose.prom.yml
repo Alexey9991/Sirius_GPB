@@ -3,7 +3,7 @@ services:
     image: siriusgpb-backend:latest
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend/Dockerfile
     container_name: siriusgpb-backend
     ports:
       - "8000:8000"
