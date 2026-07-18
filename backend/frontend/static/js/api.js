@@ -130,9 +130,9 @@
     return `${apiBaseUrl()}/account/${suffix}`;
   }
 
-  function subscriptionUrl(type, itemId) {
+  function subscriptionUrl(subType, itemId) {
     const query = new URLSearchParams({
-      type: normalizeText(type),
+      sub_type: normalizeText(subType),
       item_id: String(itemId ?? ""),
     });
     return `${apiBaseUrl()}/data/subscriptions?${query}`;
@@ -444,7 +444,9 @@
       || {
         id,
         name,
+        city_id: normalizeText(projectInput?.city_id),
         city: normalizeText(projectInput?.city, "Не указан"),
+        developer_id: normalizeText(projectInput?.developer_id),
         developer: normalizeText(projectInput?.developer, "Не указан"),
         score: 0,
         level: "GREEN",
@@ -521,6 +523,8 @@
     const analysis = {
       project_id: project.id || null,
       project_name: project.name,
+      city_id: project.city_id || null,
+      city_name: project.city || "Не указан",
       developer_id: project.developer_id || null,
       developer_name: project.developer || "Не указан",
       level,
@@ -721,12 +725,12 @@
     }));
   }
 
-  async function subscribe(type, itemId) {
-    return request(subscriptionUrl(type, itemId), { method: "PUT" });
+  async function subscribe(subType, itemId) {
+    return request(subscriptionUrl(subType, itemId), { method: "PUT" });
   }
 
-  async function unsubscribe(type, itemId) {
-    return request(subscriptionUrl(type, itemId), { method: "DELETE" });
+  async function unsubscribe(subType, itemId) {
+    return request(subscriptionUrl(subType, itemId), { method: "DELETE" });
   }
 
   async function searchSite(query, limit = DEFAULT_LIMIT) {

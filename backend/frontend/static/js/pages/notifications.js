@@ -10,11 +10,11 @@
   function isSubscribed(item) {
     const subscriptions = Array.isArray(state.backendSubscriptions) ? state.backendSubscriptions : [];
     return subscriptions.some((subscription) => {
-      const type = String(subscription.type || "").toLowerCase();
+      const subType = String(subscription.sub_type || "").toLowerCase();
       const itemId = String(subscription.item_id ?? "");
-      if (["project", "projects", "object", "objects", "жк"].includes(type)) return itemId === String(item.project_id || "");
-      if (["developer", "developers", "застройщик"].includes(type)) return itemId === String(item.developer_id || "");
-      if (["city", "cities", "location", "locations"].includes(type)) return itemId === String(item.city_id || "");
+      if (["project", "projects", "object", "objects", "жк"].includes(subType)) return itemId === String(item.project_id || "");
+      if (["developer", "developers", "застройщик"].includes(subType)) return itemId === String(item.developer_id || "");
+      if (["city", "cities", "location", "locations"].includes(subType)) return itemId === String(item.city_id || "");
       return false;
     });
   }

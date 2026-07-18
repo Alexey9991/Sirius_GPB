@@ -142,18 +142,18 @@
     updateHeaderUser();
   }
 
-  function hasBackendSubscription(type, itemId) {
-    const normalizedType = String(type || "").toLowerCase();
+  function hasBackendSubscription(subType, itemId) {
+    const normalizedType = String(subType || "").toLowerCase();
     const normalizedId = String(itemId ?? "");
     if (!normalizedId) return false;
     return state.backendSubscriptions.some((subscription) => (
-      String(subscription.type || "").toLowerCase() === normalizedType
+      String(subscription.sub_type || "").toLowerCase() === normalizedType
       && String(subscription.item_id ?? "") === normalizedId
     ));
   }
 
-  function updateNamedSubscription(type, name, active) {
-    const collection = type === "developer" ? "developers" : type === "city" ? "locations" : "projects";
+  function updateNamedSubscription(subType, name, active) {
+    const collection = subType === "developer" ? "developers" : subType === "city" ? "locations" : "projects";
     const values = new Set(state.subscriptions[collection] || []);
     if (active) values.add(name);
     else values.delete(name);
@@ -161,7 +161,7 @@
     saveUserSubscriptions();
   }
 
-  async function toggleBackendSubscription(type, itemId, name, button) {
+  async function toggleBackendSubscription(subType, itemId, name, button) {
     if (!state.currentUser) {
       showToast("Войдите в аккаунт, чтобы управлять подписками");
       navigate("login");
@@ -172,20 +172,20 @@
       return false;
     }
 
-    const active = hasBackendSubscription(type, itemId);
+    const active = hasBackendSubscription(subType, itemId);
     if (button) {
       button.disabled = true;
       button.textContent = active ? "Удаляем…" : "Подписываем…";
     }
     try {
       if (active) {
-        await window.api.unsubscribe(type, itemId);
+        await window.api.unsubscribe(subType, itemId);
         state.backendSubscriptions = state.backendSubscriptions.filter((subscription) => !(
-          String(subscription.type || "").toLowerCase() === String(type).toLowerCase()
+          String(subscription.sub_type || "").toLowerCase() === String(subType).toLowerCase()
           && String(subscription.item_id ?? "") === String(itemId)
         ));
       } else {
-        const subscription = await window.api.subscribe(type, itemId);
+        const subscription = await window.api.subscribe(subType, itemId);
         if (!subscription || typeof subscription !== "object") {
           throw new Error("Сервер не вернул созданную подписку");
         }
@@ -193,7 +193,7 @@
       }
 
       if (state.currentUser) state.currentUser.subscriptions = [...state.backendSubscriptions];
-      updateNamedSubscription(type, name, !active);
+      updateNamedSubscription(subType, name, !active);
       ctx.updateNotificationBadge?.();
       if (currentRoute() === "dashboard" && state.analysis) {
         document.getElementById("resultPanel").innerHTML = ctx.analysisPanel?.(state.analysis) || "";

@@ -21,14 +21,14 @@
   function subscriptionTarget(type, value) {
     if (type === "projects") {
       const project = state.projects.find((item) => item.name === value);
-      return { type: "project", id: project?.id, name: value };
+      return { sub_type: "project", id: project?.id, name: value };
     }
     if (type === "developers") {
       const project = state.projects.find((item) => item.developer === value);
-      return { type: "developer", id: project?.developer_id || project?.raw?.developer?.id || project?.raw?.developer_id, name: value };
+      return { sub_type: "developer", id: project?.developer_id || project?.raw?.developer?.id || project?.raw?.developer_id, name: value };
     }
     const project = state.projects.find((item) => item.city === value);
-    return { type: "city", id: project?.city_id || project?.raw?.city?.id || project?.raw?.city_id, name: value };
+    return { sub_type: "city", id: project?.city_id || project?.raw?.city?.id || project?.raw?.city_id, name: value };
   }
 
   async function updateSubscription(input) {
@@ -36,7 +36,7 @@
     const value = input.value;
     const target = subscriptionTarget(type, value);
     input.disabled = true;
-    const updated = await toggleBackendSubscription(target.type, target.id, target.name);
+    const updated = await toggleBackendSubscription(target.sub_type, target.id, target.name);
     if (updated && currentRoute() === "profile") return renderProfile();
     input.disabled = false;
   }
@@ -46,7 +46,7 @@
     const subscriptions = Array.isArray(user?.subscriptions) ? user.subscriptions : [];
 
     subscriptions.forEach((subscription) => {
-      const type = String(subscription.type || "").toLowerCase();
+      const subType = String(subscription.sub_type || "").toLowerCase();
       const itemId = String(subscription.item_id ?? subscription.id ?? "");
       const explicitName = subscription.item?.name
         || subscription.project?.name
@@ -54,15 +54,15 @@
         || subscription.developer?.name
         || subscription.name;
 
-      if (type.includes("city") || type.includes("location") || type.includes("локац") || type.includes("город")) {
+      if (subType.includes("city") || subType.includes("location") || subType.includes("локац") || subType.includes("город")) {
         const project = projects.find((item) => String(item.city_id ?? item.raw?.city?.id ?? item.raw?.city_id ?? "") === itemId);
         const name = explicitName || project?.city;
         if (name) result.locations.push(name);
-      } else if (type.includes("developer") || type.includes("застрой")) {
+      } else if (subType.includes("developer") || subType.includes("застрой")) {
         const project = projects.find((item) => String(item.developer_id ?? item.raw?.developer?.id ?? item.raw?.developer_id ?? "") === itemId);
         const name = explicitName || project?.developer;
         if (name) result.developers.push(name);
-      } else if (type.includes("project") || type.includes("жк") || type.includes("объект")) {
+      } else if (subType.includes("project") || subType.includes("жк") || subType.includes("объект")) {
         const project = projects.find((item) => String(item.id) === itemId);
         const name = explicitName || project?.name;
         if (name) result.projects.push(name);
