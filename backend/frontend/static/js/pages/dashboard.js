@@ -59,7 +59,6 @@ function analysisPanel(data) {
     const p = palette[data.level] || palette.GREEN;
     const projectSubscribed = hasBackendSubscription("project", data.project_id);
     const developerSubscribed = hasBackendSubscription("developer", data.developer_id);
-    const citySubscribed = hasBackendSubscription("city", data.city_id);
     const events = (data.events || []).slice(0, 3).map((event) => componentHtml("event-mini", {
       TIME: shortTime(event.published_at),
       TITLE: esc(event.title),
@@ -78,11 +77,6 @@ function analysisPanel(data) {
       DEVELOPER_SUBSCRIBE_DISABLED: data.developer_id ? "" : "disabled",
       DEVELOPER_ID: esc(data.developer_id || ""),
       DEVELOPER_NAME: esc(data.developer_name || "Застройщик не указан"),
-      CITY_SUBSCRIBE_CLASS: citySubscribed ? "secondary-btn" : "primary-btn",
-      CITY_SUBSCRIBE_LABEL: citySubscribed ? "Вы подписаны на город" : "Подписаться на город",
-      CITY_SUBSCRIBE_DISABLED: data.city_id ? "" : "disabled",
-      CITY_ID: esc(data.city_id || ""),
-      CITY_NAME: esc(data.city_name || "Город не указан"),
       SUMMARY: esc(data.summary),
       RING_COLOR: p.color,
       SCORE: Number(data.score),
