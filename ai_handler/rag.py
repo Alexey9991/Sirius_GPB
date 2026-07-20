@@ -111,12 +111,12 @@ class Rag:
     def _build_project_queries(self, queries, row):
         if pd.notna(row["project_name"]):
             query = f"Проанализируй ЖК {row['project_name']}. Выдели риски"
-            self._add_eval_query(queries, query, row["id"])
+            self._add_eval_query(queries, query, row["news_id"])
 
     def _build_developer_queries(self, queries, row):
         if pd.notna(row["developer"]):
             query = f"Проанализируй застройщика {row['developer']}. Выдели риски"
-            self._add_eval_query(queries, query, row["id"])
+            self._add_eval_query(queries, query, row["news_id"])
 
     def _collect_eval_queries(self):
         queries = {}
@@ -191,9 +191,8 @@ def _clean(text):
 def _prepare_chunks(df):
     chunk_size = 550
     chunk_overlap = 120
-    length_function = len
     separators = ["\n\n", "\n", ". ", ", ", " ", ""]
-    text_splitter = _create_text_splitter(chunk_size, chunk_overlap, length_function, separators)
+    text_splitter = _create_text_splitter(chunk_size, chunk_overlap, len, separators)
     all_chunks = []
     for _, row in df.iterrows():
         all_chunks.extend(_chunk_document(row, text_splitter))
@@ -206,15 +205,14 @@ def _create_text_splitter(chunk_size, chunk_overlap, length_function, separators
 
 
 def _chunk_document(row, text_splitter):
-    chunks = text_splitter.split_text(row["content"])
+    chunks = text_splitter.split_text(row["text"])
     result = []
     for chunk_id, chunk in enumerate(chunks):
         result.append({
-            "news_id": row["id"],
+            "news_id": row["news_id"],
             "chunk_id": chunk_id,
-            "url": row['url'],
-            "text": f'ЖК: {row["project_name"]} застройщик: {row['developer']} уровень риска: {row['risk']} дата: {row['date']} город: {row['new_city']} источник: {row['source']} ссылка: {row['url']} {chunk}',
-            # ОБНОВИТЬ ДАТАСЕТ ДОБАВИТЬ КОЛОНКУ URL
+            "url": row["url"],
+            "text": f'ЖК: {row["project_name"]} застройщик: {row["developer"]} уровень риска: {row["risk"]} дата: {row["date"]} город: {row["city"]} источник: {row["source"]} ссылка: {row["url"]} {chunk}',
         })
     return result
 

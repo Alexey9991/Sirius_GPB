@@ -41,6 +41,15 @@ async def search(table: str, q: str, stype: str, auth: AuthSess, db_sess: DbSess
     return result.all()
 
 
+@data_router.get("/stats")
+async def table_stats(db_sess: DbSess):
+    stats = {}
+    for name, model in TABLES.items():
+        stmt = select(func.count()).select_from(model)
+        stats[name] = (await db_sess.execute(stmt)).scalar()
+    return stats
+
+
 @data_router.api_route("/subscriptions", methods=["PUT", "DELETE"])
 async def subscription(sub_type: str, item_id: str, request: Request, auth: AuthSess, db_sess: DbSess):
     try:

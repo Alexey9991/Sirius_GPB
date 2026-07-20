@@ -45,12 +45,12 @@ services:
   #     - ./config:/app/config
 
   ai_handler:
-    image: siriusgpb-rag-manager:latest
+    image: siriusgpb-ai-handler:latest
     build:
       context: .
       dockerfile: ai_handler/Dockerfile
       target: base
-    container_name: siriusgpb-rag-manager
+    container_name: siriusgpb-ai-handler
     restart: unless-stopped
     ports:
       - "8088:8088"

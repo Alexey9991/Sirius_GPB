@@ -1,13 +1,3 @@
-/**
- * Frontend API adapter for the current backend.
- *
- * The backend exposes generic table endpoints:
- *   GET /api/data/get/<table>
- *   GET /api/data/search/<table>?stype=<field>&q=<query>
- *
- * Page components still consume a richer UI contract, so this file maps real
- * backend rows into projects, events, alerts and object analysis objects.
- */
 (function () {
   const DEFAULT_LIMIT = 30;
   const FULL_DATA_LIMIT = Number.MAX_SAFE_INTEGER;
