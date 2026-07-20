@@ -106,11 +106,21 @@ class NewsParser:
                     news_content[key] = '\n'.join([elem.get_text(strip=True) 
                         for elem in soup.select(item) if elem.get_text(strip=True)])
                 else:
-                    news_content[key] = soup.select_one(item).get_text(strip=True)
-                    if key=="date" and isinstance(key, tuple):
-                        news_content[key] = datetime.strptime(news_content[key], item[1])
+                    element = soup.select_one(item if isinstance(item, str) else item[0])
+                    if key == "date":
+                        try:
+                            datetime_attr = element.get('datetime')
+                            if datetime_attr:
+                                news_content[key] = datetime.fromisoformat(datetime_attr)
+                            elif item[1]:
+                                news_content[key] = datetime.strptime(element.get_text(strip=True), item[1])
+                        except:
+                            news_content[key] = datetime.now()
+                        news_content[key] = news_content[key].strftime("%H:%M %d:%m:%Y")
+                    else:
+                        news_content[key] = element.get_text(strip=True)
             except:
-                news_content[key] = None
+                news_content[key] = ""
 
         self.reload_links(add_cached_news=(news_link, news_content))
         if not map(lambda x: x[1], news_content.items()):
@@ -128,7 +138,7 @@ class RiaRU(NewsParser):
             get_news={
                 "title": '.article__title',
                 "content": 'div.article__body.js-mediator-article.mia-analytics div.article__text',
-                "date": ("div.article__info-date", ""),
+                "date": ("div.article__info-date", "%H:%M %d.%m.%Y"),
                 "source": "div.media__copyright-item.m-copyright",
                 "category": "a.article__tags-item"
             }

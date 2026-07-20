@@ -18,4 +18,4 @@ COPY database/ ./database/
 COPY config/ ./config/
 COPY data_manager/ .
 
-CMD python parser.py
+CMD python main.py

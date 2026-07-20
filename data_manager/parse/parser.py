@@ -5,7 +5,7 @@ import json
 import tqdm
 import os
 
-from news_parsers import import_parsers, PARSERS
+from parse.news_parsers import import_parsers, PARSERS
 from database.engine import session_maker_sync
 from database.models.news import ParseNews, News
 from ml.news_validator.text import TextClassifier
@@ -43,15 +43,14 @@ class NewsImporter:
                 task = self.tasks.get()
                 if task is None:
                     break
-                url = task["url"]
-                known = any(url.startswith(prefix) for prefix in PARSERS)
+                known = any(task["url"].startswith(prefix) for prefix in PARSERS)
                 if not known:
                     self.progress.put(1)
                     continue
                 try:
-                    exists = session.query(ParseNews.id).filter_by(url=url).first()
+                    exists = session.query(ParseNews.id).filter_by(url=task["url"]).first()
                     if not exists:
-                        record = ParseNews(url=url)
+                        record = ParseNews(url=task["url"])
                         session.add(record)
                         session.commit()
                 except Exception:
@@ -123,30 +122,23 @@ class NewsParser:
                 if task is None:
                     break
                 link = session.query(ParseNews).get(task)
-                if not link:
-                    self.progress.put(1)
-                    continue
                 parser = self._get_parser(link.url)
-                if not parser:
+                if not link or not parser:
                     self.progress.put(1)
                     continue
-                try:
-                    data = parser.get_news(link.url)
-                    if data and data.get("title"):
-                        is_valid = bool(self.validator.predict(
-                            data["title"] + " " + data.get("content", "")))
-                        link.is_valid = is_valid
-                        if is_valid:
-                            news_record = News(
-                                id=link.id, title=data["title"], content=data["content"],
-                                date=datetime.strptime(data["date"], "%H:%M %d:%m:%Y"),
-                                source=data.get("source"), category=data.get("category"))
-                            session.add(news_record)
-                        session.commit()
-                except Exception:
-                    session.rollback()
-                finally:
-                    self.progress.put(1)
+                data = parser.get_news(link.url)
+                if data and data.get("title"):
+                    is_valid = bool(self.validator.predict(
+                        data["title"] + " " + data.get("content", "")))
+                    link.is_valid = is_valid
+                    if is_valid:
+                        news_record = News(
+                            id=link.id, title=data["title"], content=data["content"],
+                            date=datetime.strptime(data["date"], "%H:%M %d:%m:%Y"),
+                            source=data.get("source"), category=data.get("category"))
+                        session.add(news_record)
+                    session.commit()
+                self.progress.put(1)
         finally:
             session.close()
 
