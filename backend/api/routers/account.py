@@ -6,7 +6,7 @@ from typing import Annotated, Tuple
 from datetime import datetime
 
 from api.schemas import sign_schema
-from database.engine import DbSess
+from deps import DbSess
 from database import *
 
 

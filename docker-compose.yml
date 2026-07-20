@@ -15,6 +15,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      target: base
     container_name: siriusgpb-backend
     restart: unless-stopped
     ports:
@@ -24,8 +25,45 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
+      - ./database:/app/database
       - ./config:/app/config
+
+  # data_manager:
+  #   image: siriusgpb-data-manager:latest
+  #   build:
+  #     context: .
+  #     dockerfile: data_manager/Dockerfile
+  #   container_name: siriusgpb-data-manager
+  #   # restart: unless-stopped
+  #   env_file:
+  #     - config/.env
+  #   depends_on:
+  #     - postgres
+  #   volumes:
+  #     - ./data_manager:/app
+  #     - ./config:/app/config
+
+  rag_manager:
+    image: siriusgpb-rag-manager:latest
+    build:
+      context: .
+      dockerfile: rag_manager/Dockerfile
+      target: base
+    container_name: siriusgpb-rag-manager
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    env_file:
+      - config/.env
+    depends_on:
+      - postgres
+    volumes:
+      - ./rag_manager:/app
+      - ./database:/app/database
+      - ./config:/app/config
+      - huggingface_cache:/root/.cache/huggingface
 
 volumes:
   pgdata:
+  huggingface_cache:

@@ -10,14 +10,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN pip3 install poetry
 WORKDIR /tmp
 COPY pyproject.toml poetry.lock /tmp/
-RUN poetry config virtualenvs.create false && poetry install --only main,backend --no-root
+RUN poetry config virtualenvs.create false && poetry install --only main,data_manager --no-root
 
-ENV PYTHONPATH /app:/app/backend
+ENV PYTHONPATH /app
 WORKDIR /app
-COPY backend/ ./backend/
 COPY database/ ./database/
 COPY config/ ./config/
+COPY data_manager/ .
 
-CMD uvicorn backend.main:app --host 0.0.0.0 --port 8000
-FROM base AS debug
-CMD fastapi dev --entrypoint backend.main:app --host 0.0.0.0 --port 8000
+CMD python parser.py

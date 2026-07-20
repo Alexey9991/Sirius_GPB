@@ -6,8 +6,8 @@ import tqdm
 import os
 
 from news_parsers import import_parsers, PARSERS
-from backend.database.engine import session_maker_sync
-from backend.database.models.news import ParseNews, News
+from database.engine import session_maker_sync
+from database.models.news import ParseNews, News
 from ml.news_validator.text import TextClassifier
 
 

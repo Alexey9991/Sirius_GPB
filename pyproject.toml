@@ -3,28 +3,59 @@ name = "siriusgpb"
 version = "0.1.0"
 description = "RAG-Система анализа новостного потока | Для мониторинга импакт-сигналов рынка недвижимости"
 authors = [
-    {name = "B1t0ne",email = "hornid2010@mail.ru"}
+    {name = "B1t0ne", email = "hornid2010@mail.ru"}
 ]
 requires-python = ">=3.12,<4.0"
-dependencies = [
-    "sqlalchemy (>=2.0.51,<3.0.0)",
-    "pandas (>=2.2.0,<3.0.0)",
-    "fastapi[standard] (>=0.139.0,<0.140.0)",
-    "httpx (>=0.28.1,<0.29.0)",
-    "beautifulsoup4 (>=4.15.0,<5.0.0)",
-    "asyncpg (>=0.31.0,<0.32.0)",
-    "uvicorn (>=0.51.0,<0.52.0)",
-    "pydantic (>=2.13.4,<3.0.0)",
-    "pydantic-settings (>=2.14.2,<3.0.0)",
-    "python-multipart (>=0.0.32,<0.0.33)",
-    "bcrypt (>=5.0.0,<6.0.0)",
-    "transformers (>=5.13.1,<6.0.0)",
-    "pymorphy3 (>=2.0.6,<3.0.0)",
-    "torch (>=2.13.0,<3.0.0)",
-    "nltk (>=3.10.0,<4.0.0)",
-    "scikit-learn (>=1.9.0,<2.0.0)",
-    "psycopg2-binary (>=2.9.12,<3.0.0)",
-]
+
+[tool.poetry.dependencies]
+# === Базовые зависимости (все модули) ===
+python = ">=3.12,<4.0"
+
+# Общие для database и config
+sqlalchemy = ">=2.0.51,<3.0.0"
+pandas = ">=2.2.0,<3.0.0"
+pydantic = ">=2.13.4,<3.0.0"
+pydantic-settings = ">=2.14.2,<3.0.0"
+asyncpg = ">=0.31.0,<0.32.0"
+psycopg2-binary = ">=2.9.12,<3.0.0"
+httpx = ">=0.28.1,<0.29.0"
+bcrypt = ">=5.0.0,<6.0.0"
+
+# === backend (веб-сервер + БД) ===
+[tool.poetry.group.backend]
+optional = true
+
+[tool.poetry.group.backend.dependencies]
+fastapi = {extras = ["standard"], version = ">=0.139.0,<0.140.0"}
+uvicorn = ">=0.51.0,<0.52.0"
+python-multipart = ">=0.0.32,<0.0.33"
+
+# === data_manager (парсеры + ML-классификация) ===
+[tool.poetry.group.data_manager]
+optional = true
+
+[tool.poetry.group.data_manager.dependencies]
+beautifulsoup4 = ">=4.15.0,<5.0.0"
+pymorphy3 = ">=2.0.6,<3.0.0"
+nltk = ">=3.10.0,<4.0.0"
+scikit-learn = ">=1.9.0,<2.0.0"
+openai = ">=2.46.0,<3.0.0"
+joblib = ">=1.4.0,<2.0.0"
+
+# === rag_manager (RAG + эмбеддинги + heavy ML) ===
+[tool.poetry.group.rag_manager]
+optional = true
+
+[tool.poetry.group.rag_manager.dependencies]
+sentence-transformers = ">=3.4.0,<4.0.0"
+transformers = ">=4.41.0,<5.0.0"
+pymorphy3 = ">=2.0.6,<3.0.0"
+nltk = ">=3.10.0,<4.0.0"
+langchain-text-splitters = ">=1.1.2,<2.0.0"
+faiss-cpu = ">=1.14.3,<2.0.0"
+openai = ">=2.46.0,<3.0.0"
+fastapi = {extras = ["standard"], version = ">=0.139.0,<0.140.0"}
+uvicorn = ">=0.51.0,<0.52.0"
 
 
 [build-system]
