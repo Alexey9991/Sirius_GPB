@@ -69,7 +69,6 @@ async def subscription(sub_type: str, item_id: str, request: Request, auth: Auth
             stmt = select(Subscription).where(and_(Subscription.user_id == auth.user_id,
                 Subscription.type == sub_type, Subscription.item_id == item_id))
             subscription = (await db_sess.execute(stmt)).scalars().first()
-
             if not subscription:
                 raise HTTPException(404, "Subscription not found")
             
@@ -79,7 +78,6 @@ async def subscription(sub_type: str, item_id: str, request: Request, auth: Auth
             
         else:
             raise HTTPException(405, "Method not allowed")
-
     except Exception as e:
         await db_sess.rollback()
         if isinstance(auth, tuple):

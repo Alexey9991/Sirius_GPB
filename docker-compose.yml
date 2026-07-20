@@ -29,20 +29,20 @@ services:
       - ./database:/app/database
       - ./config:/app/config
 
-  # data_manager:
-  #   image: siriusgpb-data-manager:latest
-  #   build:
-  #     context: .
-  #     dockerfile: data_manager/Dockerfile
-  #   container_name: siriusgpb-data-manager
-  #   # restart: unless-stopped
-  #   env_file:
-  #     - config/.env
-  #   depends_on:
-  #     - postgres
-  #   volumes:
-  #     - ./data_manager:/app
-  #     - ./config:/app/config
+  data_manager:
+    image: siriusgpb-data-manager:latest
+    build:
+      context: .
+      dockerfile: data_manager/Dockerfile
+    container_name: siriusgpb-data-manager
+    # restart: unless-stopped
+    env_file:
+      - config/.env
+    depends_on:
+      - postgres
+    volumes:
+      - ./data_manager:/app
+      - ./config:/app/config
 
   ai_handler:
     image: siriusgpb-ai-handler:latest
