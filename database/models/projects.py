@@ -1,4 +1,4 @@
-from database.models.__meta__ import SQLBase
+from .__meta__ import SQLBase
 from sqlalchemy import orm
 import sqlalchemy as sql
 import datetime

@@ -2,10 +2,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 import pandas as pd
 
-from database.engine import engine
-from database.models.news import News, ParseNews
-from database.models.alerts import ImpactSignal
-from database.models.projects import Project, Developer, City
+from .engine import engine_sync
+from .models.news import News, ParseNews
+from .models.alerts import ImpactSignal
+from .models.projects import Project, Developer, City
 
 
 def get_rag_df():
@@ -28,7 +28,7 @@ def get_rag_df():
         .join(City, City.id == ImpactSignal.city_id)
     )
 
-    with Session(engine) as session:
+    with Session(engine_sync) as session:
         result = session.execute(stmt).mappings().all()
     df = pd.DataFrame(result)
     return df

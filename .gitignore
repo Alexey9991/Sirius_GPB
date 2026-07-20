@@ -11,3 +11,9 @@ catboost_info/
 .vscode/
 andrej-karpathy-skills/
 backend.tar
+backend/config/
+data_manager/config/
+rag_manager/config/
+rag_manager/backend/
+data_manager/backend/
+.clinerules/

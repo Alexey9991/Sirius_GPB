@@ -3,7 +3,7 @@ from sqlalchemy import select, func, and_
 
 from config.settings import settings
 from api.routers.account import AuthSess
-from database.engine import DbSess
+from deps import DbSess
 from database import *
 
 

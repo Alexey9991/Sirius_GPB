@@ -1,8 +1,8 @@
-from database.models.__meta__ import SQLBase
-from database.models.news import *
-from database.models.projects import *
-from database.models.users import *
-from database.models.alerts import *
+from .models.__meta__ import SQLBase
+from .models.news import *
+from .models.projects import *
+from .models.users import *
+from .models.alerts import *
 
 
 import sys
