@@ -41,11 +41,11 @@ services:
   #   depends_on:
   #     - postgres
 
-  rag_manager:
+  ai_handler:
     image: siriusgpb-rag-manager:latest
     build:
       context: .
-      dockerfile: rag_manager/Dockerfile
+      dockerfile: ai_handler/Dockerfile
       target: base
     container_name: siriusgpb-rag-manager
     restart: unless-stopped

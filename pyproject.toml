@@ -42,11 +42,11 @@ scikit-learn = ">=1.9.0,<2.0.0"
 openai = ">=2.46.0,<3.0.0"
 joblib = ">=1.4.0,<2.0.0"
 
-# === rag_manager (RAG + эмбеддинги + heavy ML) ===
-[tool.poetry.group.rag_manager]
+# === ai_handler (RAG + эмбеддинги + heavy ML) ===
+[tool.poetry.group.ai_handler]
 optional = true
 
-[tool.poetry.group.rag_manager.dependencies]
+[tool.poetry.group.ai_handler.dependencies]
 sentence-transformers = ">=3.4.0,<4.0.0"
 transformers = ">=4.41.0,<5.0.0"
 pymorphy3 = ">=2.0.6,<3.0.0"

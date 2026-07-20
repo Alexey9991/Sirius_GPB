@@ -44,11 +44,11 @@ services:
   #     - ./data_manager:/app
   #     - ./config:/app/config
 
-  rag_manager:
+  ai_handler:
     image: siriusgpb-rag-manager:latest
     build:
       context: .
-      dockerfile: rag_manager/Dockerfile
+      dockerfile: ai_handler/Dockerfile
       target: base
     container_name: siriusgpb-rag-manager
     restart: unless-stopped
@@ -59,7 +59,7 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ./rag_manager:/app
+      - ./ai_handler:/app
       - ./database:/app/database
       - ./config:/app/config
       - huggingface_cache:/root/.cache/huggingface
