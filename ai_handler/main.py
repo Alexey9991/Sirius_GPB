@@ -9,7 +9,7 @@ from config.settings import settings
 
 
 def create_rag() -> Rag:
-    df = get_rag_df().head(100)
+    df = get_rag_df()
     all_chunks, embeddings = prepare_vdb_data(df)
     return Rag(
         all_chunks=all_chunks,

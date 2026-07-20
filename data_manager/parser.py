@@ -173,7 +173,7 @@ class NewsParser:
                     if t.name.startswith("Thread") and t.daemon) and self.tasks.empty())
 
 
-if __name__ == "__main__":
+def main():
     importer = NewsImporter()
     importer.run(os.path.join(
         os.path.dirname(__file__), "dbtest", "news_merged_20260624_125713.jsonl"))
