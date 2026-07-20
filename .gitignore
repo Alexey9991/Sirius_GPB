@@ -12,8 +12,9 @@ catboost_info/
 andrej-karpathy-skills/
 backend.tar
 backend/config/
+backend/database/
 data_manager/config/
 ai_handler/config/
-ai_handler/backend/
-data_manager/backend/
+ai_handler/database/
+data_manager/database/
 .clinerules/
