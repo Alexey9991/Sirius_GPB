@@ -12,18 +12,18 @@ from connectors.llm_api import dpsk
 
 
 embedder = SentenceTransformer("BAAI/bge-m3")
-nltk.download('stopwords', quiet=True)
+nltk.download('stopwords')
 stopwords = set(stopwords.words('russian'))
 cache = {}
 morph = pymorphy3.MorphAnalyzer()
 
 
 class Rag:
-    def __init__(self, all_chunks, raw_document, embeddings, llm_api, reranker):
+    def __init__(self, all_chunks, raw_document, embeddings, llm_api_key, reranker):
         self.all_chunks = all_chunks
         self.raw_document = raw_document
         self.index = self.init_index(embeddings)
-        self.llm_preprocess = dpsk(llm_api, prompt="Ты - модель предобработчик текста. На вход тебе предоставлен текст и правила, строго следуя которым ты должен вернуть измененный текст.")
+        self.llm_preprocess = dpsk(llm_api_key, prompt="Ты - модель предобработчик текста. На вход тебе предоставлен текст и правила, строго следуя которым ты должен вернуть измененный текст.")
         self.eval_dataset = None
         self.reranker = reranker
 

@@ -43,6 +43,7 @@ class DatabaseSettings(BaseSettings):
 class Settings(BaseSettings):
     database: DatabaseSettings = DatabaseSettings()
     FORBIDDEN_TABLES: list[str] = ["users", "authentications", "alerts", "subscriptions"]
+    OPENAI_API_KEY: str = ""
 
 
 settings = Settings()
