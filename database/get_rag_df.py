@@ -22,10 +22,10 @@ def get_rag_df():
             City.name.label("city"),
         )
         .join(ParseNews, ParseNews.id == News.id)
-        .join(ImpactSignal, ImpactSignal.news_id == News.id)
-        .join(Project, Project.id == ImpactSignal.project_id)
-        .join(Developer, Developer.id == ImpactSignal.developer_id)
-        .join(City, City.id == ImpactSignal.city_id)
+        .outerjoin(ImpactSignal, ImpactSignal.news_id == News.id)
+        .outerjoin(Project, Project.id == ImpactSignal.project_id)
+        .outerjoin(Developer, Developer.id == ImpactSignal.developer_id)
+        .outerjoin(City, City.id == ImpactSignal.city_id)
     )
 
     with Session(engine_sync) as session:
