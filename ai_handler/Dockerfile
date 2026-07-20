@@ -12,9 +12,6 @@ WORKDIR /tmp
 COPY pyproject.toml poetry.lock /tmp/
 RUN poetry config virtualenvs.create false && poetry install --only main,ai_handler --no-root
 
-# Pre-download models during build to avoid slow startup
-RUN python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('BAAI/bge-m3'); CrossEncoder('BAAI/bge-reranker-v2-m3')"
-
 ENV PYTHONPATH /app
 WORKDIR /app
 COPY database/ ./database/

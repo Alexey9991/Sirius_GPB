@@ -1,4 +1,3 @@
-// This file is watched by src/main.py and reloads automatically after saving.
 (function () {
   const app = document.getElementById("app");
   const globalSearch = document.getElementById("globalSearch");
