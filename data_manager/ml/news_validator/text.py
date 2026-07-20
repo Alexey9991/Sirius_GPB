@@ -1,15 +1,15 @@
+from os.path import join as pjoin, dirname
 from nltk.corpus import stopwords
 import pymorphy3
 import joblib
 import nltk
 import re
-from os import path
+
+models_path = pjoin(dirname(__file__), 'models')
 
 
 class TextClassifier:
-    def __init__(
-            self, model_path=path.join(path.dirname(__file__), 'models', 'logres.pkl'),
-            tfidf_path=path.join(path.dirname(__file__), 'models', 'tfidf.pkl')):
+    def __init__(self, model_path=pjoin(models_path, 'svc.pkl'), tfidf_path=pjoin(models_path, 'tfidfsvc.pkl')):
         self.model = joblib.load(model_path)
         self.tfidf = joblib.load(tfidf_path)
         nltk.download('stopwords', quiet=True)
@@ -49,9 +49,3 @@ class TextClassifier:
         X = self.tfidf.transform([cleaned_text])
         prediction = self.model.predict(X)[0]
         return int(prediction)
-
-
-if __name__ == "__main__":
-    classifier = TextClassifier()
-    result = classifier.predict("Дольщики проблемного ЖК «Высота» получили ключи: после трех лет ожидания объект достроен благодаря новому подрядчику и господдержке.")
-    print(result)
