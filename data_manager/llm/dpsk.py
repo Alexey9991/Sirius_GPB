@@ -1,9 +1,9 @@
 from openai import OpenAI
 
 
-class DeepSeekClient:
-    def __init__(self, api_key, prompt, model='deepseek-chat', base_url='https://api.deepseek.com', messages_limit=7):
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+class dpsk:
+    def __init__(self, api_key, prompt, messages_limit=7, model='deepseek-v4-flash'):
+        self.client = OpenAI(api_key=api_key, base_url='https://api.deepseek.com')
         self.model = model
         self.prompt = prompt
         self.messages_limit = messages_limit

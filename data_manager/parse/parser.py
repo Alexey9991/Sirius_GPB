@@ -3,7 +3,6 @@ import threading
 import queue
 import json
 import tqdm
-import os
 
 from parse.news_parsers import import_parsers, PARSERS
 from database.engine import session_maker_sync
@@ -11,11 +10,13 @@ from database.models.news import ParseNews, News
 from ml.news_validator.text import TextClassifier
 
 
+
 class NewsImporter:
-    def __init__(self, workers: int = 10):
+    def __init__(self, workers: int = 10, progress: bool = False):
         self.workers = workers
+        self.progress_enabled = progress
         self.tasks = queue.Queue()
-        self.progress = queue.Queue()
+        self.progress_queue = queue.Queue()
         self.stop = threading.Event()
 
     def run(self, filepath: str):
@@ -23,7 +24,11 @@ class NewsImporter:
         reader.start()
         workers = [threading.Thread(target=self._worker, daemon=True) for _ in range(self.workers)]
         for w in workers: w.start()
-        self._monitor(sum(1 for _ in open(filepath, 'r', encoding='utf-8')))
+        total = sum(1 for _ in open(filepath, 'r', encoding='utf-8'))
+        if self.progress_enabled:
+            self._monitor(total)
+        else:
+            self._drain()
         for w in workers: w.join()
         reader.join()
 
@@ -32,7 +37,8 @@ class NewsImporter:
             for line in f:
                 if self.stop.is_set():
                     break
-                self.tasks.put(json.loads(line))
+                task = json.loads(line)
+                self.tasks.put(task.get("url", "") if isinstance(task, dict) else "")
         for _ in range(self.workers):
             self.tasks.put(None)
 
@@ -40,37 +46,39 @@ class NewsImporter:
         session = session_maker_sync()
         try:
             while True:
-                task = self.tasks.get()
-                if task is None:
+                url = self.tasks.get()
+                if url is None:
                     break
-                known = any(task["url"].startswith(prefix) for prefix in PARSERS)
-                if not known:
-                    self.progress.put(1)
+                elif not any(url.startswith(p) for p in PARSERS):
+                    self.progress_queue.put(1)
                     continue
                 try:
-                    exists = session.query(ParseNews.id).filter_by(url=task["url"]).first()
+                    exists = session.query(ParseNews.id).filter_by(url=url).first()
                     if not exists:
-                        record = ParseNews(url=task["url"])
-                        session.add(record)
+                        session.add(ParseNews(url=url))
                         session.commit()
                 except Exception:
                     session.rollback()
                 finally:
-                    self.progress.put(1)
+                    self.progress_queue.put(1)
         finally:
             session.close()
+
+    def _drain(self):
+        while not self._done():
+            try:
+                self.progress_queue.get(timeout=0.5)
+            except queue.Empty:
+                pass
 
     def _monitor(self, total):
         with tqdm.tqdm(total=total, desc="Импорт", unit="запись") as pbar:
             while not self._done():
-                self._process_progress(pbar)
-
-    def _process_progress(self, pbar):
-        try:
-            if self.progress.get(timeout=0.1) == 1:
-                pbar.update(1)
-        except queue.Empty:
-            pass
+                try:
+                    if self.progress_queue.get(timeout=0.1) == 1:
+                        pbar.update(1)
+                except queue.Empty:
+                    pass
 
     def _done(self):
         return (all(not t.is_alive() for t in threading.enumerate()
@@ -78,13 +86,36 @@ class NewsImporter:
                 and self.tasks.empty())
 
 
+
+class NewsRecipient:
+    def __init__(self):
+        self.parsers = import_parsers()
+
+    def fetch(self):
+        session = session_maker_sync()
+        try:
+            for prefix, parser in self.parsers.items():
+                links = parser.get_links()
+                for title, url in links:
+                    try:
+                        exists = session.query(ParseNews.id).filter_by(url=url).first()
+                        if not exists:
+                            session.add(ParseNews(url=url))
+                            session.commit()
+                    except Exception:
+                        session.rollback()
+        finally:
+            session.close()
+
+
 class NewsParser:
-    def __init__(self, workers: int = 10):
+    def __init__(self, workers: int = 10, progress: bool = False):
         self.workers = workers
+        self.progress_enabled = progress
         self.parsers = import_parsers()
         self.validator = TextClassifier()
         self.tasks = queue.Queue()
-        self.progress = queue.Queue()
+        self.progress_queue = queue.Queue()
         self.stop = threading.Event()
 
     def run(self):
@@ -97,7 +128,10 @@ class NewsParser:
             total = session.query(ParseNews).filter(ParseNews.is_valid == None).count()
         finally:
             session.close()
-        self._monitor(total)
+        if self.progress_enabled:
+            self._monitor(total)
+        else:
+            self._drain()
         for w in workers: w.join()
         reader.join()
 
@@ -124,7 +158,7 @@ class NewsParser:
                 link = session.query(ParseNews).get(task)
                 parser = self._get_parser(link.url)
                 if not link or not parser:
-                    self.progress.put(1)
+                    self.progress_queue.put(1)
                     continue
                 data = parser.get_news(link.url)
                 if data and data.get("title"):
@@ -138,7 +172,7 @@ class NewsParser:
                             source=data.get("source"), category=data.get("category"))
                         session.add(news_record)
                     session.commit()
-                self.progress.put(1)
+                self.progress_queue.put(1)
         finally:
             session.close()
 
@@ -148,26 +182,33 @@ class NewsParser:
                 return parser
         return None
 
+    def _drain(self):
+        while not self._done():
+            try:
+                self.progress_queue.get(timeout=0.5)
+            except queue.Empty:
+                pass
+
     def _monitor(self, total):
         with tqdm.tqdm(total=total, desc="Парсинг", unit="запись") as pbar:
             while not self._done():
-                self._process_progress(pbar)
-
-    def _process_progress(self, pbar):
-        try:
-            if self.progress.get(timeout=0.1) == 1:
-                pbar.update(1)
-        except queue.Empty:
-            pass
+                try:
+                    if self.progress_queue.get(timeout=0.1) == 1:
+                        pbar.update(1)
+                except queue.Empty:
+                    pass
 
     def _done(self):
         return (all(not t.is_alive() for t in threading.enumerate()
                     if t.name.startswith("Thread") and t.daemon) and self.tasks.empty())
 
 
+
 def main():
+    import os
     importer = NewsImporter()
     importer.run(os.path.join(
         os.path.dirname(__file__), "dbtest", "news_merged_20260624_125713.jsonl"))
-    parser = NewsParser()
-    parser.run()
+    recipient = NewsRecipient()
+    recipient.fetch()
+    NewsParser().run()

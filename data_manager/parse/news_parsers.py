@@ -41,15 +41,11 @@ class NewsParser:
     def get_links(self):
         response = requests.get(self.parsered_link, headers=headers_for_requests)
         soup = BeautifulSoup(response.text, 'html.parser')
-
         news_links = []
-        news_a_tags = soup.select(self.links_parser)
-        for a in news_a_tags:
+        for a in soup.select(self.links_parser):
             href = a.get('href', '')
             href = urljoin(self.parser_site, href) if href.startswith("/") else href
-            news_name = a.get_text(strip=True)
-            news_links.append((news_name, href))
-
+            news_links.append((a.get_text(strip=True), href))
         return news_links
 
 
@@ -67,11 +63,9 @@ class NewsParser:
 
         if img_elem:
             img_link = img_elem.get('src')
-
             if img_link and 'url=' in img_link:
                 parsed_url = urlparse(img_link)
                 query_params = parse_qs(parsed_url.query)
-                
                 if 'url' in query_params:
                     img_link = unquote(query_params['url'][0])
 

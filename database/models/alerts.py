@@ -11,20 +11,19 @@ class ImpactSignal(SQLBase):
     id = sql.Column(
         sql.String, primary_key=True, unique=True,
         nullable=False, default=lambda: uuid.uuid4().hex)
-    risk_level = sql.Column(sql.Integer, nullable=False)
-    risk_category = sql.Column(sql.String, nullable=False)
+    risk_level = sql.Column(sql.Integer, nullable=True)
     news_id = sql.Column(
         sql.String, sql.ForeignKey(
             "news.id", ondelete="CASCADE"), nullable=False)
     city_id = sql.Column(
         sql.Integer, sql.ForeignKey(
-            "cities.id", ondelete="CASCADE"), nullable=False)
+            "cities.id", ondelete="CASCADE"), nullable=True)
     developer_id = sql.Column(
         sql.Integer, sql.ForeignKey(
-            "developers.id", ondelete="CASCADE"), nullable=False)
+            "developers.id", ondelete="CASCADE"), nullable=True)
     project_id = sql.Column(
         sql.String, sql.ForeignKey(
-            "projects.id", ondelete="CASCADE"), nullable=False)
+            "projects.id", ondelete="CASCADE"), nullable=True)
     created_at = sql.Column(
         sql.DateTime, default=datetime.datetime.now, nullable=False)
 
