@@ -5,14 +5,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONHASHSEED=random \
     PYTHONUNBUFFERED=1 \
     POETRY_NO_CACHE=1 \
-    PATH="/root/.local/bin:$PATH"
+    PATH="/root/.local/bin:$PATH" \
+    PYTHONPATH="/app:/app/backend"
 
 RUN pip3 install poetry
 WORKDIR /tmp
 COPY pyproject.toml poetry.lock /tmp/
 RUN poetry config virtualenvs.create false && poetry install --only main,backend --no-root
 
-ENV PYTHONPATH /app:/app/backend
 WORKDIR /app
 COPY backend/ ./backend/
 COPY database/ ./database/
