@@ -25,15 +25,20 @@ ENTITY_EXTRACTION_PROMPT = """Ты — модель извлечения сущ�
 
 
 class ProjectExtractor:
-    def __init__(self):
+    def __init__(self, restarts: int=3):
         self.client = dpsk(settings.OPENAI_API_KEY, prompt=ENTITY_EXTRACTION_PROMPT)
+        self.restarts = restarts
 
-    def extract(self, text: str) -> dict[str, str | None]:
+    def extract(self, text: str, restart_num: int=0) -> dict[str, str | None]:
         raw = self.client.chat(text)
         try:
             return ProjectExtractor._parse_response(raw)
         except (json.JSONDecodeError, ValueError, TypeError):
-            return ProjectExtractor._empty_result()
+            if restart_num < self.restarts:
+                self.client.reset_history()
+                return self.extract(text, restart_num+1)
+            else:
+                return ProjectExtractor._empty_result()
 
     @staticmethod
     def _parse_response(raw: str) -> dict[str, str | None]:

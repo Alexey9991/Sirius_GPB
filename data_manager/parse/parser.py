@@ -49,7 +49,7 @@ class NewsImporter:
                 url = self.tasks.get()
                 if url is None:
                     break
-                elif not any(url.startswith(p) for p in PARSERS):
+                elif not any(url.startswith(p) for p in PARSERS) or not url:
                     self.progress_queue.put(1)
                     continue
                 try:
@@ -206,9 +206,11 @@ class NewsParser:
 
 def main():
     import os
-    importer = NewsImporter()
-    importer.run(os.path.join(
+    NewsImporter(progress=True).run(os.path.join(
         os.path.dirname(__file__), "dbtest", "news_merged_20260624_125713.jsonl"))
-    recipient = NewsRecipient()
-    recipient.fetch()
-    NewsParser().run()
+    NewsRecipient().fetch()
+    NewsParser(progress=True).run()
+
+
+if __name__=="__main__":
+    main()

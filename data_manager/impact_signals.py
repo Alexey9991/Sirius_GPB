@@ -7,14 +7,13 @@ from database.engine import session_maker_sync
 from database import ImpactSignal, News
 from llm.project_extractor import ProjectExtractor
 from ml.risk.risk import RiskPredictor
-from .entity_matcher import resolve_city, resolve_developer, resolve_project
+from ml.entity_matcher import resolve_city, resolve_developer, resolve_project
 
 
 class ImpactSignalsCreator:
     def __init__(self, workers: int = 10, progress: bool = False):
         self.workers = workers
         self.progress_enabled = progress
-        self.project_extractor = ProjectExtractor()
         self.risk_predictor = RiskPredictor()
         self.tasks = queue.Queue()
         self.progress_queue = queue.Queue()
@@ -78,7 +77,7 @@ class ImpactSignalsCreator:
                 if not news:
                     self.progress_queue.put(1)
                     continue
-                project_elements = self.project_extractor.extract(news.content)
+                project_elements = ProjectExtractor().extract(news.content)
                 risk_level = self.risk_predictor.predict_proba(news.content)
                 impact_signal = self.resolve_and_create(
                     news, project_elements, risk_level, session)

@@ -1,5 +1,5 @@
 from parse.parser import NewsRecipient, NewsParser
-from ml.impact_signals import ImpactSignalsCreator
+from impact_signals import ImpactSignalsCreator
 
 
 class DataManager:
