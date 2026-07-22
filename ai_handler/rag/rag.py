@@ -8,7 +8,7 @@ import faiss
 import nltk
 import re
 
-from connectors.llm_api import dpsk
+from dpsk import dpsk
 
 
 embedder = SentenceTransformer("BAAI/bge-m3")

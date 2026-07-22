@@ -102,13 +102,12 @@ class NewsParser:
                 else:
                     element = soup.select_one(item if isinstance(item, str) else item[0])
                     if key == "date":
-                        try:
-                            datetime_attr = element.get('datetime')
-                            if datetime_attr:
-                                news_content[key] = datetime.fromisoformat(datetime_attr)
-                            elif item[1]:
-                                news_content[key] = datetime.strptime(element.get_text(strip=True), item[1])
-                        except:
+                        datetime_attr = element.get('datetime')
+                        if datetime_attr:
+                            news_content[key] = datetime.fromisoformat(datetime_attr)
+                        elif item[1]:
+                            news_content[key] = datetime.strptime(element.get_text(strip=True), item[1])
+                        else:
                             news_content[key] = datetime.now()
                         news_content[key] = news_content[key].strftime("%H:%M %d:%m:%Y")
                     else:

@@ -1,26 +1,22 @@
-from sentence_transformers import CrossEncoder
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from pydantic import BaseModel
 
-from database.get_rag_df import get_rag_df
-from rag import Rag, prepare_vdb_data
+from rag.ragdb import init_vector_db, create_rag, Rag, update_chunks
 from config.settings import settings
+from dpsk import dpsk
 
 
-def create_rag() -> Rag:
-    df = get_rag_df()
-    all_chunks, embeddings = prepare_vdb_data(df)
-    return Rag(
-        all_chunks=all_chunks,
-        raw_document=df,
-        embeddings=embeddings,
-        llm_api_key=settings.OPENAI_API_KEY,
-        reranker=CrossEncoder("BAAI/bge-reranker-v2-m3"))
+class QueryRequest(BaseModel):
+    query: str
+
+class UpdateRequest(BaseModel):
+    path: str = "data/new_news.parquet"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_vector_db()
     app.state.rag = create_rag()
     yield
 
@@ -32,33 +28,20 @@ def get_rag() -> Rag:
     return app.state.rag
 
 
-class QueryRequest(BaseModel):
-    query: str
-
-
-class UpdateRequest(BaseModel):
-    path: str = "data/new_news.parquet"
-
-
 @app.post("/ask")
 async def ask(request: QueryRequest, rag: Rag = Depends(get_rag),):
     context, urls = rag.get_context(request.query)
-
-    return {
-        "context": context,
-        "urls": list(urls),
-    }
+    llm = dpsk(settings.OPENAI_API_KEY, prompt="Ты — модель аналитик. На вход тебе представлен контекст из новостей и пользовательский запрос. Отвечай исключительно исходя из фактов, без собственного мнения. При использовании фактов из контекста обязательно указывай ссылку из метаданных в круглых скобках без каких-либо изменений.")
+    answer = llm.chat(f"Контекст:\n{context}\n\nЗапрос:\n{request.query}")
+    return f"{answer}\n\nСсылки на источники:\n{"\n".join(urls)}"
 
 
 @app.post("/update")
-async def update_rag(rag: Rag = Depends(get_rag)):
-    new_df = get_rag_df()
-    new_chunks, new_embeddings = prepare_vdb_data(new_df)
-    rag.add_new_data(
-        raw_document=new_df,
-        chunks=new_chunks, embeddings=new_embeddings)
+async def update_rag(request: UpdateRequest, rag: Rag = Depends(get_rag),):
+    new_df, new_chunks, new_embeddings = update_chunks()
+    rag.add_new_data(new_df, new_chunks, new_embeddings)
     return {
         "status": "updated",
-        "added_documents": len(new_df),
-        "added_chunks": len(new_chunks),
+        "documents": len(new_df),
+        "chunks": len(new_chunks),
     }
