@@ -1,7 +1,7 @@
 from json_repair import repair_json
 import json
 
-from dpsk import dpsk
+from .dpsk import dpsk
 from config.settings import settings
 
 

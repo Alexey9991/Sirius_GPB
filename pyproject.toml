@@ -50,6 +50,7 @@ nltk = ">=3.10.0,<4.0.0"
 langchain-text-splitters = ">=1.1.2,<2.0.0"
 faiss-cpu = ">=1.14.3,<2.0.0"
 openai = ">=2.46.0,<3.0.0"
+pgvector = ">=0.4.0,<1.0.0"
 fastapi = {extras = ["standard"], version = ">=0.139.0,<0.140.0"}
 uvicorn = ">=0.51.0,<0.52.0"
 
