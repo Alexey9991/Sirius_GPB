@@ -7,6 +7,7 @@ from database.engine import session_maker_sync
 from database import ImpactSignal, News
 from llm.project_extractor import ProjectExtractor
 from ml.risk.risk import RiskPredictor
+from .entity_matcher import resolve_city, resolve_developer, resolve_project
 
 
 class ImpactSignalsCreator:
@@ -53,6 +54,19 @@ class ImpactSignalsCreator:
         for _ in range(self.workers):
             self.tasks.put(None)
 
+    @staticmethod
+    def resolve_and_create(news: News, project_elements: dict[str, str | None],
+                           risk_level: int, session) -> ImpactSignal:
+        city_id = resolve_city(project_elements.get("city"), session)
+        developer_id = resolve_developer(project_elements.get("developer"), session)
+        project_id = resolve_project(
+            project_elements.get("project"), developer_id, city_id, session)
+
+        impact_signal = ImpactSignal(
+            news_id=news.id, city_id=city_id, developer_id=developer_id,
+            project_id=project_id, risk_level=risk_level)
+        return impact_signal
+
     def _worker(self):
         session = session_maker_sync()
         try:
@@ -64,13 +78,10 @@ class ImpactSignalsCreator:
                 if not news:
                     self.progress_queue.put(1)
                     continue
-                impact_signal = ImpactSignal(news_id=news.id)
                 project_elements = self.project_extractor.extract(news.content)
-                if any(v is not None for v in project_elements.values()):
-                    impact_signal.city_id = project_elements.get("city")
-                    impact_signal.developer_id = project_elements.get("developer")
-                    impact_signal.project_id = project_elements.get("project")
-                    impact_signal.risk_level = self.risk_predictor.predict_proba(news.content)
+                risk_level = self.risk_predictor.predict_proba(news.content)
+                impact_signal = self.resolve_and_create(
+                    news, project_elements, risk_level, session)
                 session.add(impact_signal)
                 session.commit()
                 self.progress_queue.put(1)

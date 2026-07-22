@@ -29,7 +29,7 @@ class DatabaseSettings(BaseSettings):
     @cached_property
     def database_url_sync(self) -> URL:
         database_url = URL(
-            drivername=self.DRIVER + "psycopg2",
+            drivername=self.DRIVER + "psycopg",
             username=self.USER,
             password=self.PASSWORD,
             host=self.HOST,

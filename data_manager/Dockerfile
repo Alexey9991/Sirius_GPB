@@ -9,6 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH="/app"
 
 RUN pip3 install poetry
+RUN apt-get update && apt-get install -y libpq-dev && rm -rf /var/lib/apt/lists/*
 WORKDIR /tmp
 COPY pyproject.toml poetry.lock /tmp/
 RUN poetry config virtualenvs.create false && poetry install --only main,data_manager --no-root
