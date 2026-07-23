@@ -63,7 +63,7 @@ async def subscription(sub_type: str, item_id: str, request: Request, auth: Auth
             db_sess.add(subs)
             await db_sess.commit()
             await db_sess.refresh(subs)
-            return {"message": "Subscription created", "subscription": subs}
+            return subs
 
         elif request.method == "DELETE":
             stmt = select(Subscription).where(and_(Subscription.user_id == auth.user_id,
@@ -71,10 +71,9 @@ async def subscription(sub_type: str, item_id: str, request: Request, auth: Auth
             subscription = (await db_sess.execute(stmt)).scalars().first()
             if not subscription:
                 raise HTTPException(404, "Subscription not found")
-            
             await db_sess.delete(subscription)
             await db_sess.commit()
-            return {"message": "Subscription deleted successfully"}
+            return "Subscription deleted successfully"
             
         else:
             raise HTTPException(405, "Method not allowed")

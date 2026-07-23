@@ -31,8 +31,7 @@ class ImpactSignal(SQLBase):
     city = orm.relationship("City", back_populates="impact_signals", lazy="selectin")
     developer = orm.relationship("Developer", back_populates="impact_signals", lazy="selectin")
     project = orm.relationship("Project", back_populates="impact_signals", lazy="selectin")
-    alert = orm.relationship(
-        "Alert", back_populates="impact_signal", cascade="all, delete-orphan", lazy="selectin")
+    alert = orm.relationship("Alert", back_populates="impact_signal", cascade="all, delete-orphan", lazy="selectin")
 
 
 class Subscription(SQLBase):
@@ -45,8 +44,7 @@ class Subscription(SQLBase):
     item_id = sql.Column(sql.String, nullable=False)
 
     user = orm.relationship("User", back_populates="subscriptions")
-    alert = orm.relationship(
-        "Alert", back_populates="subscription", cascade="all, delete-orphan", lazy="selectin")
+    alert = orm.relationship("Alert", back_populates="subscription", cascade="all, delete-orphan")
 
 
 class Alert(SQLBase):
@@ -62,5 +60,5 @@ class Alert(SQLBase):
     created_at = sql.Column(
         sql.DateTime, default=datetime.datetime.now, nullable=False)
 
-    impact_signal = orm.relationship("ImpactSignal", back_populates="alert", lazy="selectin")
+    impact_signal = orm.relationship("ImpactSignal", back_populates="alert")
     subscription = orm.relationship("Subscription", back_populates="alert", lazy="selectin")

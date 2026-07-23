@@ -16,9 +16,7 @@ class ParseNews(SQLBase):
     created_at = sql.Column(
         sql.DateTime, default=datetime.datetime.now, nullable=False)
 
-    news = orm.relationship(
-        "News", back_populates="parse_news", uselist=False,
-        cascade="all, delete-orphan", lazy="selectin")
+    news = orm.relationship("News", back_populates="parse_news", uselist=False, cascade="all, delete-orphan")
 
 
 class News(SQLBase):
@@ -37,6 +35,4 @@ class News(SQLBase):
 
     parse_news = orm.relationship(
         "ParseNews", back_populates="news", uselist=False, lazy="selectin")
-    impact_signal = orm.relationship(
-        "ImpactSignal", back_populates="news",
-        cascade="all, delete-orphan", lazy="selectin")
+    impact_signal = orm.relationship("ImpactSignal", back_populates="news", cascade="all, delete-orphan")
