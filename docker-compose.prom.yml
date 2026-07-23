@@ -3,8 +3,6 @@ services:
     image: pgvector/pgvector:pg18
     container_name: siriusgpb-postgres
     restart: unless-stopped
-    networks:
-      - siriusgpb-network
     ports:
       - "5432:5432"
     env_file:
@@ -34,8 +32,6 @@ services:
       dockerfile: data_manager/Dockerfile
     container_name: siriusgpb-data-manager
     # restart: unless-stopped
-    networks:
-      - siriusgpb-network
     env_file:
       - config/.env
     depends_on:
@@ -51,8 +47,6 @@ services:
     restart: unless-stopped
     ports:
       - "8088:8088"
-    networks:
-      - siriusgpb-network
     env_file:
       - config/.env
     depends_on:
