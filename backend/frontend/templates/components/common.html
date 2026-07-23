@@ -1,0 +1,260 @@
+<template id="component-loader">
+  <div class="loader">Загружаем данные…</div>
+</template>
+
+<template id="component-error">
+  <div class="error-box">Не удалось получить данные: [[MESSAGE]]</div>
+</template>
+
+<template id="component-empty">
+  <div class="compact-empty [[CLASS_NAME]]">[[MESSAGE]]</div>
+</template>
+
+<template id="component-chip">
+  <span class="chip [[CSS_CLASS]]">[[LABEL]]</span>
+</template>
+
+<template id="component-source-card">
+  <article class="source-card">
+    <div>
+      [[CHIP]]
+      <time>[[TIME]]</time>
+    </div>
+    <h4>[[TITLE]]</h4>
+    <p>[[SUMMARY]]</p>
+    <footer><span>[[META]]</span><a href="[[URL]]" target="_blank" rel="noopener">Открыть источник</a></footer>
+  </article>
+</template>
+
+<template id="component-object-row">
+  <button class="object-row" [[ANALYZE_ATTRS]]>
+    <span class="object-avatar">[[INITIALS]]</span>
+    <span><span class="object-name">[[NAME]]</span><span class="object-meta">[[META]]</span></span>
+    <span class="score">[[SCORE]]<small>/100</small></span>[[CHIP]]
+  </button>
+</template>
+
+<template id="component-search-history-row">
+  <button class="search-history-row" data-analyze="[[PROJECT_NAME]]">
+    <span>
+      <b>[[PROJECT_NAME]]</b>
+      <small>[[META]]</small>
+    </span>
+    <span class="history-score"><b>[[SCORE]]</b>/100 [[CHIP]]</span>
+  </button>
+</template>
+
+<template id="component-analysis-empty">
+  <section class="card">
+    <div class="empty-state">
+      <div><div class="empty-icon">?</div>Выберите объект из списка или введите название ЖК, чтобы увидеть результат анализа.</div>
+    </div>
+  </section>
+</template>
+
+<template id="component-analysis-panel">
+  <section class="card">
+    <div class="result-topline">
+      <div class="result-kicker">[[CHIP]]</div>
+      <div class="result-actions">
+        <button class="[[PROJECT_SUBSCRIBE_CLASS]] subscribe-entity-btn" data-action="toggle-backend-subscription" data-subscription-type="project" data-subscription-id="[[PROJECT_ID]]" data-subscription-name="[[PROJECT_NAME]]" data-subscribe-label="Подписаться на ЖК" data-subscribed-label="Вы подписаны на ЖК" [[PROJECT_SUBSCRIBE_DISABLED]]>[[PROJECT_SUBSCRIBE_LABEL]]</button>
+        <button class="[[DEVELOPER_SUBSCRIBE_CLASS]] subscribe-entity-btn" data-action="toggle-backend-subscription" data-subscription-type="developer" data-subscription-id="[[DEVELOPER_ID]]" data-subscription-name="[[DEVELOPER_NAME]]" data-subscribe-label="Подписаться на застройщика" data-subscribed-label="Вы подписаны на застройщика" [[DEVELOPER_SUBSCRIBE_DISABLED]]>[[DEVELOPER_SUBSCRIBE_LABEL]]</button>
+        <button class="[[CITY_SUBSCRIBE_CLASS]] subscribe-entity-btn" data-action="toggle-backend-subscription" data-subscription-type="city" data-subscription-id="[[CITY_ID]]" data-subscription-name="[[CITY_NAME]]" data-subscribe-label="Подписаться на город" data-subscribed-label="Вы подписаны на город" [[CITY_SUBSCRIBE_DISABLED]]>[[CITY_SUBSCRIBE_LABEL]]</button>
+      </div>
+    </div>
+    <h2 class="result-title">[[PROJECT_NAME]]</h2>
+    <div class="result-summary">[[SUMMARY]]</div>
+    <div class="score-box" style="--ring-color:[[RING_COLOR]];--ring-value:[[SCORE]]">
+      <div class="score-ring"><span>[[SCORE]]</span></div>
+      <div class="score-copy"><b>Индекс риска</b><br>Скоринг по новостям, жалобам, юридическим и операционным сигналам.</div>
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>События</h2><button class="text-link" data-route="news">Вся лента</button></div>
+    [[EVENTS]]
+  </section>
+</template>
+
+<template id="component-event-mini">
+  <article class="event-mini"><time>[[TIME]]</time><b>[[TITLE]]</b><a href="[[URL]]">[[SOURCE]]</a></article>
+</template>
+
+<template id="component-alert-row">
+  <article class="alert-row">
+    <span class="severity [[SEVERITY_CLASS]]"></span>
+    <div>
+      <h3>[[TITLE]]</h3>
+      <p>[[SUMMARY]]</p>
+      <div class="row-meta"><span>[[PROJECT_NAME]]</span><span>[[CATEGORY]]</span><span>[[SOURCE]]</span></div>
+      <button class="inline-ai-btn" data-ai-event="[[EVENT_ID]]">Разобрать в потоке</button>
+    </div>
+    <time class="row-time">Сегодня, [[TIME]]</time>
+  </article>
+</template>
+
+<template id="component-ai-empty">
+  <div class="ai-empty"><span>AI</span><b>Запустите ИИ-анализ всех новостей</b><p>ИИ берёт в контекст весь доступный новостной поток, все ЖК, застройщиков, города и категории риска.</p></div>
+</template>
+
+<template id="component-ai-report">
+  <div class="ai-report page-enter">
+    <div class="ai-report-header">
+      <div class="ai-report-title">
+        <span class="ai-spark">ИИ</span>
+        <div>
+          <small>Сводка по всему новостному потоку</small>
+          <h2>[[VERDICT]]</h2>
+          <p>[[FOCUS]]</p>
+        </div>
+      </div>
+      <div class="ai-confidence [[CONFIDENCE_CLASS]]"><b>[[CONFIDENCE]]%</b><span>риск</span></div>
+    </div>
+    <div class="ai-metrics">[[METRICS]]</div>
+    <section class="ai-summary-block">
+      <span>Главный вывод</span>
+      <p>[[LEAD]]</p>
+    </section>
+    <div class="ai-answer-columns ai-report-columns">
+      <div><h3>Что повлияло</h3><ul>[[FACTORS]]</ul></div>
+      <div><h3>Что сделать дальше</h3><ol>[[RECOMMENDATIONS]]</ol></div>
+    </div>
+    <div class="ai-priority-list">
+      <h3>Приоритетные объекты</h3>
+      [[PRIORITIES]]
+    </div>
+    <section class="ai-sources">
+      <div class="ai-sources-head"><h3>Источники и ссылки</h3><span>[[SOURCES_COUNT]] проверяемых публикаций</span></div>
+      <div class="source-list">[[SOURCES]]</div>
+    </section>
+    <div class="insight-lists">
+      <div><h3>Объекты в выборке</h3>[[PROJECTS]]</div>
+      <div><h3>Связанные новости</h3>[[EVENTS]]</div>
+    </div>
+    <div class="ai-disclaimer">ИИ-анализ построен по всем новостям в ленте и не ограничивается выбранной карточкой события.</div>
+  </div>
+</template>
+
+<template id="component-ai-metric">
+  <div class="ai-metric [[TONE]]"><span>[[LABEL]]</span><b>[[VALUE]]</b><small>[[HINT]]</small></div>
+</template>
+
+<template id="component-ai-priority-card">
+  <button class="ai-priority-card" [[ANALYZE_ATTRS]]>
+    <span>[[INDEX]]</span>
+    <div><b>[[NAME]]</b><small>[[META]]</small><em>[[SIGNAL]]</em></div>
+    <div class="ai-priority-meta"><strong>[[SCORE]]/100</strong>[[CHIP]]</div>
+  </button>
+</template>
+
+<template id="component-mini-result">
+  <button class="mini-result" [[ATTRS]]><b>[[TITLE]]</b><span>[[META]]</span></button>
+</template>
+
+<template id="component-question-suggestion">
+  <button type="button" data-question="[[QUESTION]]">[[QUESTION]]</button>
+</template>
+
+<template id="component-project-table-row">
+  <button type="button" class="project-table-row" role="row" [[ANALYZE_ATTRS]]>
+    <span role="cell" class="project-name-cell">[[NAME]]</span>
+    <span role="cell">[[CITY]]</span>
+    <span role="cell">[[DEVELOPER]]</span>
+    <span role="cell">[[CHIP]]</span>
+    <span role="cell" class="progress risk-progress"><b>[[SCORE]]</b>/100<div class="progress-line"><span style="width:[[SCORE]]%"></span></div></span>
+    <span role="cell">[[UPDATED]]</span>
+  </button>
+</template>
+
+<template id="component-history-row">
+  <button class="history-row" data-analyze="[[PROJECT_NAME]]">
+    <span><b>[[PROJECT_NAME]]</b><small>[[META]]</small></span>
+    <span class="history-summary">[[SUMMARY]]</span>
+    <span class="history-score"><b>[[SCORE]]</b>/100 [[CHIP]]</span>
+  </button>
+</template>
+
+<template id="component-risk-change-row">
+  <article class="risk-change-row">
+    <span class="change-marker [[MARKER_CLASS]]"></span>
+    <span><b>[[PROJECT_NAME]]</b><small>[[META]]</small></span>
+    <span class="risk-transition">[[TRANSITION]]</span>
+    <span class="score-change">[[SCORE_CHANGE]]<b>[[NEW_SCORE]]</b></span>
+  </article>
+</template>
+
+<template id="component-feed-row">
+  <article class="feed-row">
+    <span class="severity [[SEVERITY_CLASS]]" style="[[SEVERITY_STYLE]]"></span>
+    <div>
+      <div class="feed-title-row"><h3><a class="feed-title-link" href="[[URL]]" target="_blank" rel="noopener noreferrer">[[TITLE]]</a></h3>[[CHIP]]</div>
+      <p>[[SUMMARY]]</p>
+      <div class="row-meta"><span>[[PROJECT_NAME]]</span><span>[[CATEGORY]]</span><span>[[SOURCE]]</span></div>
+      <button class="inline-ai-btn" data-ai-event="[[EVENT_ID]]">Разобрать в потоке</button>
+    </div>
+    <time class="row-time">[[TIME]]</time>
+  </article>
+</template>
+
+<template id="component-source-row">
+  <div class="source-row"><span><b>[[NAME]]</b><small>[[COUNT]]</small></span><span class="online">● онлайн</span></div>
+</template>
+
+<template id="component-search-section">
+  <section class="card search-section">
+    <div class="card-head"><h2>[[TITLE]]</h2><span class="object-meta">[[COUNT]]</span></div>
+    <div class="search-list">[[ROWS]]</div>
+  </section>
+</template>
+
+<template id="component-search-result-row">
+  <button class="search-result-row" [[ATTRS]]><b>[[TITLE]]</b><span>[[META]]</span>[[CHIP]]</button>
+</template>
+
+<template id="component-overlay-notification-item">
+  <button class="overlay-notification-item [[READ_CLASS]]" data-ai-event="[[EVENT_ID]]">
+    <span>
+      <b>[[TITLE]]</b>
+      <small>[[META]]</small>
+    </span>
+    [[CHIP]]
+  </button>
+</template>
+
+<template id="component-notification-popover">
+  <section class="notification-popover" role="dialog" aria-label="Уведомления">
+    <header>
+      <div><span>Уведомления</span><b>[[TITLE]]</b></div>
+    </header>
+    <div class="overlay-notification-list">[[ROWS]]</div>
+    <footer>
+      <button class="secondary-btn danger-btn" data-action="clear-overlay-notifications" [[CLEAR_DISABLED]]>Удалить все</button>
+    </footer>
+  </section>
+</template>
+
+<template id="component-notification-row">
+  <article class="notification-item [[READ_CLASS]]">
+    <span class="notification-symbol" aria-hidden="true">[[SYMBOL]]</span>
+    <div>
+      <h3>[[TITLE]]</h3>
+      <p>[[SUMMARY]]</p>
+      <div class="notification-meta">[[META]]</div>
+    </div>
+    <time class="notification-time">Сегодня, [[TIME]]</time>
+  </article>
+</template>
+
+<template id="component-subscription-option">
+  <label class="subscription-option">
+    <input type="checkbox" data-subscription="[[TYPE]]" value="[[VALUE]]" checked>
+    <span>[[LABEL]]</span>
+  </label>
+</template>
+
+<template id="component-test-push-button">
+  <button id="testPush" class="text-link push-test">Проверить уведомление</button>
+</template>
+
+<template id="component-list-item">
+  <li>[[TEXT]]</li>
+</template>

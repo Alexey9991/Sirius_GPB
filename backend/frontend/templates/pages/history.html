@@ -1,0 +1,28 @@
+<template id="template-history">
+  <div class="page-enter">
+    <header class="page-heading">
+      <div>
+        <span class="eyebrow">Аудит решений</span>
+        <h1>История анализов</h1>
+        <p>Сохранённые проверки объектов и хронология изменения их риска.</p>
+      </div>
+      <button class="primary-btn" data-route="dashboard">Запустить анализ</button>
+    </header>
+    <div class="stat-grid">
+      <div class="stat"><small>Всего анализов</small><strong>[[HISTORY_COUNT]]</strong><span class="delta">сохранено</span></div>
+      <div class="stat"><small>Проверено объектов</small><strong>[[PROJECTS_COUNT]]</strong><span class="delta">уникальных ЖК</span></div>
+      <div class="stat"><small>Изменений риска</small><strong>[[CHANGES_COUNT]]</strong><span class="delta">зафиксировано</span></div>
+      <div class="stat"><small>Критических оценок</small><strong>[[CRITICAL_COUNT]]</strong><span class="delta negative">требуют внимания</span></div>
+    </div>
+    <div class="history-grid">
+      <section class="card">
+        <div class="card-head"><h2>Запуски анализа</h2><span class="object-meta">Новые сверху</span></div>
+        <div class="history-list">[[HISTORY_ROWS]]</div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Изменения риска</h2><span class="object-meta">Только значимые изменения</span></div>
+        <div class="risk-change-list">[[RISK_CHANGE_ROWS]]</div>
+      </section>
+    </div>
+  </div>
+</template>

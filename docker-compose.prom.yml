@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: siriusgpb-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    env_file:
+      - config/.env
+    volumes:
+      - pgdata:/var/lib/postgresql
+
+  backend:
+    image: siriusgpb-backend:latest
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: base
+    container_name: siriusgpb-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - config/.env
+    depends_on:
+      - postgres
+
+  data_manager:
+    image: siriusgpb-data-manager:latest
+    build:
+      context: .
+      dockerfile: data_manager/Dockerfile
+    container_name: siriusgpb-data-manager
+    # restart: unless-stopped
+    env_file:
+      - config/.env
+    depends_on:
+      - postgres
+
+  ai_handler:
+    image: siriusgpb-ai-handler:latest
+    build:
+      context: .
+      dockerfile: ai_handler/Dockerfile
+      target: base
+    container_name: siriusgpb-ai-handler
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    env_file:
+      - config/.env
+    depends_on:
+      - postgres
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+
+volumes:
+  pgdata:
+  huggingface_cache:
